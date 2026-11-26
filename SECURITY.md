@@ -10,9 +10,9 @@ Use private vulnerability reporting or the email above. Do not open a public iss
 
 ## Public repository rules
 
-`main` accepts changes through a pull request. The `skill` and `scripts` checks must pass before a squash merge. Force-pushes and deletion of `main` are blocked. A second reviewer is not required, so one maintainer can merge after CI passes.
+`main` accepts changes through a pull request. The `skill`, `scripts`, and `analyze` checks must pass before a squash merge. Force-pushes and deletion of `main` are blocked. A second reviewer is not required, so one maintainer can merge after CI passes.
 
-Workflows from pull requests run with read-only token permissions and no production secrets. A workflow from a fork does not run until a maintainer approves the first contribution from that account. Actions are pinned to a commit SHA. Dependabot opens weekly pull requests for those actions. Secret scanning push protection blocks supported secrets before they are pushed. CodeQL scans the Python scripts. It is not a required merge check.
+Workflows from pull requests run with read-only token permissions and no production secrets. A workflow from a fork does not run until a maintainer approves the first contribution from that account. Actions are pinned to a commit SHA. Dependabot opens weekly pull requests for those actions. Secret scanning push protection blocks supported secrets before they are pushed. CodeQL scans the Python scripts, and that `analyze` check must pass before merge. Dependabot groups every `github/codeql-action` update into one pull request so `init` and `analyze` stay on the same version.
 
 ## Applications you audit
 
