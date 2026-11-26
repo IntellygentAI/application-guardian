@@ -35,6 +35,36 @@ How commands run:
 - At most 5 MB of output is kept per command. The rest is hashed, then dropped.
 - When a command exits, anything it started in its process group is stopped.
 
+## Binding checks to tests
+
+An exit code of 0 does not show that the right tests ran. `jest --passWithNoTests` with no matching tests, a file where every test is skipped, or a test of something else can all exit 0. So the workflow binds each mandatory check to named tests, and checks the runner's own report.
+
+`guardian-checks.json`, at the repository root, lists the tests that prove each check. Start from `templates/ci/guardian-checks.json`; the format is in `schemas/guardian-checks.schema.json`.
+
+```json
+{
+  "check_id": "ownership",
+  "runner": "pytest",
+  "command": "python -m pytest -q tests/security/test_invoices.py",
+  "required_tests": [
+    "tests/security/test_invoices.py::test_owner_can_read_invoice",
+    "tests/security/test_invoices.py::test_other_user_is_denied"
+  ]
+}
+```
+
+With `--controls guardian-checks.json`:
+
+- The audit must record exactly the registry's command for that check.
+- Every critical check that passed needs an entry. A check whose tests cannot be verified stays NOT TESTED; it never passes on its exit code.
+- `ci_evidence.py` adds `--junitxml` to the command, removes any report left from an earlier run first, and records the outcome of every test in the report.
+- The gate returns NO-GO when the report is missing, no tests ran, a required test did not run, or a required test failed or was skipped. Fewer passing tests than `minimum_passed` is also NO-GO.
+- The registry must be committed and must have a line of its own in CODEOWNERS. Each required test file must exist.
+
+pytest is the only runner whose reports are read so far. A registry entry with another runner is NO-GO, so that check is recorded as NOT TESTED until an adapter exists. Without `--controls` the gate checks exit codes only, as before.
+
+The registry proves that the reviewed tests ran and passed. It cannot prove that those tests check the control well, or that a test is not written to pass. That is what code-owner review of the tests and the registry is for.
+
 ## Trust boundary
 
 This is not a sandbox. The recorded commands are your tests, and they run with the same rights as any other step in the tests job. The setup relies on three things:
@@ -56,9 +86,10 @@ What it does not stop:
 2. Copy `templates/ci/guardian-release.yml` to `.github/workflows/guardian-release.yml`.
 3. Replace the install step with your own, for example `npm ci`. It fails until you do.
 4. Copy `templates/ci/CODEOWNERS` to `.github/CODEOWNERS` and name your release reviewers.
-5. Make sure files your tests create, such as `node_modules/`, `.pytest_cache/`, or coverage output, are in `.gitignore`. The gate treats any other new file as an uncommitted change and returns NO-GO.
-6. Commit the audit. Evidence recorded on the commit before the reports were added stays current, as long as only the audit file and the report files changed after it.
-7. Turn on the branch protection settings below.
+5. Copy `templates/ci/guardian-checks.json` to `guardian-checks.json` and list the tests that prove each critical check.
+6. Make sure files your tests create, such as `node_modules/`, `.pytest_cache/`, or coverage output, are in `.gitignore`. The gate treats any other new file as an uncommitted change and returns NO-GO.
+7. Commit the audit. Evidence recorded on the commit before the reports were added stays current, as long as only the audit file and the report files changed after it.
+8. Turn on the branch protection settings below.
 
 ## Branch protection
 
@@ -72,7 +103,7 @@ In **Settings > Rules > Rulesets** (or **Branches > Branch protection rules**) f
 | Dismiss stale approvals when new commits are pushed | An approval covers the code that was approved |
 | Require approval of the most recent push | The author cannot approve their own last change |
 | Require status checks to pass: `guardian-release` | The gate must pass before merging. Do not make `guardian-tests` the required check: the gate is the decision |
-| Require branches to be up to date before merging | The gate ran on the code that merges |
+| Require branches to be up to date before merging, or use a merge queue | The gate ran on the code that merges. A check inside the workflow cannot replace this: the base branch can move after CI finishes |
 | Block force pushes and deletions | History, and so the audited commit, cannot be rewritten |
 | Bypass list: empty | Admins follow the same rules |
 
@@ -86,7 +117,8 @@ In **Settings > Actions > General**:
 It stops:
 
 - An agent or contributor writing PASS for a test that was never run, or that fails
-- A PASS whose command tests nothing, such as `true`, `echo`, or `python -c pass`
+- A PASS whose command tests nothing, such as `true`, `echo`, `python -c pass`, or `pytest --version`
+- With `--controls`: a command that exits 0 while the reviewed tests did not run, were skipped, or failed
 - Evidence copied from an earlier run, attempt, commit, or repository
 - A changed audit file slipping in after the tests ran
 - A test editing the gate before it runs
@@ -96,7 +128,7 @@ It does not stop:
 
 - **A pull request that changes the workflow, the tests, or the gate.** On `pull_request`, GitHub runs the workflow as it is in that branch, so such a PR can turn its own check green. Code-owner review is what catches it. A green `guardian-release` check on a PR that touches protected paths means nothing until a code owner approves it.
 - **A reviewer who approves without reading.** The setup makes approval necessary, not careful.
-- **Weak tests.** CI proves that the recorded command passed. It does not prove the command tests the right thing. That is what the audit and the review are for.
+- **Weak tests.** CI proves that the recorded command passed and, with `--controls`, that the named tests passed. It does not prove those tests check the right thing. That is what the audit and the review are for.
 - **Self-hosted runners shared with untrusted code.** Use GitHub-hosted runners for public repositories.
 
 ## Following the security guidance
