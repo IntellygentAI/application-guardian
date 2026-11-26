@@ -30,7 +30,7 @@ PASS requires the command, exit code, expected result, and observed result. A fi
 - Timestamp
 - Evidence location
 
-Record the same commit in `docs/audits/audit-result.json`. Run `scripts/release_gate.py` with `--head` set to the current commit. If the commits differ, the evidence is stale and the decision is NO-GO.
+Record the same commit in `docs/audits/audit-result.json`, and record the commit on every mandatory check that passed. Run `scripts/release_gate.py` with `--head` set to the current commit. Without `--head` it reads HEAD from the repository that holds the audit file and exits 2 when it cannot. If any commit differs from HEAD, or a PASS has no commit, the evidence is stale and the decision is NO-GO.
 
 ## Finding labels
 

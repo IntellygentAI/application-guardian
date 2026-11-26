@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
+import tomllib
 from pathlib import Path
 
 SIGNALS = (
@@ -55,10 +57,33 @@ def read_manifest_names(root: Path) -> set[str]:
                 names.add(token)
     pyproject = root / "pyproject.toml"
     if pyproject.is_file():
-        text = pyproject.read_text(encoding="utf-8", errors="replace").lower()
-        for candidate in ("django", "fastapi", "stripe"):
-            if candidate in text:
-                names.add(candidate)
+        names.update(pyproject_dependencies(pyproject))
+    return names
+
+
+def pyproject_dependencies(path: Path) -> set[str]:
+    """Read declared dependencies only, so a comment or description does not count."""
+    try:
+        document = tomllib.loads(path.read_text(encoding="utf-8", errors="replace"))
+    except tomllib.TOMLDecodeError:
+        return set()
+    specs: list[str] = []
+    project = document.get("project") or {}
+    specs.extend(project.get("dependencies") or [])
+    for group in (project.get("optional-dependencies") or {}).values():
+        specs.extend(group or [])
+    for group in (document.get("dependency-groups") or {}).values():
+        specs.extend(item for item in group or [] if isinstance(item, str))
+    poetry = (document.get("tool") or {}).get("poetry") or {}
+    specs.extend(poetry.get("dependencies") or {})
+    for group in (poetry.get("group") or {}).values():
+        specs.extend((group or {}).get("dependencies") or {})
+    names: set[str] = set()
+    for spec in specs:
+        token = re.split(r"[\s\[<>=!~;@(]", str(spec).strip(), maxsplit=1)[0]
+        if token:
+            names.add(token)
+            names.add(token.lower())
     return names
 
 

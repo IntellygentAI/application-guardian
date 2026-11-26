@@ -80,7 +80,12 @@ def decide(document: dict[str, Any]) -> dict[str, Any]:
         critical = bool(check.get("critical"))
         evidence = str(check.get("evidence_type") or "none")
         check_commit = str(check.get("commit") or "")
-        if status == "PASS" and check_commit and reference and check_commit != reference:
+        if status == "PASS" and not check_commit:
+            reasons.append(
+                f"{check_id} passed with no recorded commit. Evidence that cannot be tied to a commit is not fresh."
+            )
+            continue
+        if status == "PASS" and reference and check_commit != reference:
             reasons.append(
                 f"{check_id} passed at {check_commit}, not at {reference}. The evidence is stale."
             )
