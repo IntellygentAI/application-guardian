@@ -2,6 +2,10 @@
 # the people or team who approve releases. With "Require review from Code
 # Owners" turned on, a pull request that changes any of these paths cannot
 # merge without their approval. See docs/ci.md in the skill.
+#
+# Change the test and manifest paths below to match your repository. Every
+# command recorded in the audit runs code from these paths, so a weakened test
+# or a swapped dependency would otherwise change the result without review.
 
 # The workflow that runs the gate, and this file.
 /.github/workflows/ @your-org/release-reviewers
@@ -10,9 +14,22 @@
 # The release gate and the rest of the skill.
 /.agents/skills/application-guardian/ @your-org/release-reviewers
 
-# The audit result. Accepted risks and their approvers live here.
+# The audit result. Accepted risks, approvers, and the commands CI re-runs live here.
 /docs/audits/audit-result.json @your-org/release-reviewers
 
-# Optional: the tests that prove the mandatory checks. Add the folders your
-# audit commands run, so a weakened test also needs release approval.
-# /tests/security/ @your-org/release-reviewers
+# The tests that prove the mandatory checks, and their configuration.
+/tests/ @your-org/release-reviewers
+/pytest.ini @your-org/release-reviewers
+/pyproject.toml @your-org/release-reviewers
+/jest.config.* @your-org/release-reviewers
+/vitest.config.* @your-org/release-reviewers
+/playwright.config.* @your-org/release-reviewers
+
+# Dependency manifests and lockfiles, which decide what the test runners load.
+/package.json @your-org/release-reviewers
+/package-lock.json @your-org/release-reviewers
+/pnpm-lock.yaml @your-org/release-reviewers
+/yarn.lock @your-org/release-reviewers
+/requirements*.txt @your-org/release-reviewers
+/poetry.lock @your-org/release-reviewers
+/uv.lock @your-org/release-reviewers
