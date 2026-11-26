@@ -39,7 +39,6 @@ Apply it when the work:
 - Creates or modifies a database table, grant, policy, rule, or migration
 - Adds file uploads or object storage
 - Implements payments, subscriptions, coupons, credits, or entitlements
-- Collects personal data, shows a privacy notice, uses analytics or advertising, or ships third-party code, fonts, or media
 - Integrates an AI model, tools, retrieval, or memory
 - Installs or upgrades dependencies
 - Prepares a production deployment
@@ -58,7 +57,7 @@ Apply it when the work:
 Selection:
 
 1. If the user names a mode or domain, use that.
-2. Domain commands: database security audit reads [references/database-security.md](references/database-security.md); payment audit reads [references/payment-security.md](references/payment-security.md); AI security audit reads [references/ai-security.md](references/ai-security.md); legal exposure audit reads [references/legal-exposure.md](references/legal-exposure.md).
+2. Domain commands: database security audit reads [references/database-security.md](references/database-security.md); payment audit reads [references/payment-security.md](references/payment-security.md); AI security audit reads [references/ai-security.md](references/ai-security.md).
 3. Otherwise use Full Audit when there is no prior audit or the application is new.
 4. Otherwise use Quick Scan for incremental changes, and read only the references the diff actually touches. A documentation-only or comment-only diff does not start a Full Audit. If that diff touches no trust boundary, record the security domains as NOT APPLICABLE and stop.
 5. Fix and Verify starts from confirmed findings. Do not rewrite the application before those findings are recorded.
@@ -90,7 +89,6 @@ Read a reference before assessing that domain. Skip a conditional section when t
 | Input, network, devices, concurrency, accounts, permissions, locale | [references/functional-testing.md](references/functional-testing.md) |
 | Authentication, access control, XSS, injection, browser, SSRF | [references/security-testing.md](references/security-testing.md) |
 | Private data, enumeration, files, secrets, privacy lifecycle | [references/data-privacy.md](references/data-privacy.md) |
-| Notices, erasure, children, cancellation, tracking consent, names, licenses | [references/legal-exposure.md](references/legal-exposure.md) |
 | Supabase, Firebase, integrity, backup | [references/database-security.md](references/database-security.md) |
 | Endpoint inventory and API abuse | [references/api-security.md](references/api-security.md) |
 | Price, payment, coupons, entitlements | [references/payment-security.md](references/payment-security.md) |
@@ -98,6 +96,7 @@ Read a reference before assessing that domain. Skip a conditional section when t
 | WCAG 2.2 AA | [references/accessibility.md](references/accessibility.md) |
 | Dependencies, cloud, rate limits, observability, performance, tests | [references/production-readiness.md](references/production-readiness.md) |
 | Evidence, freshness, and release calculation | [references/verification-protocol.md](references/verification-protocol.md) |
+| Challenging a finding before confirming it | [references/finding-verification.md](references/finding-verification.md) |
 | Threat-modelling method | [references/threat-modelling.md](references/threat-modelling.md) |
 | Mobile clients and service workers | [references/mobile-security.md](references/mobile-security.md) |
 | MCP, tools, and agent delegation | [references/agent-mcp-security.md](references/agent-mcp-security.md) |
@@ -156,11 +155,11 @@ Judge severity by impact, exploitability, data sensitivity, and exposure. Use CV
 | Low / P3 | Minor configuration weakness, limited information disclosure, non-critical reliability defect |
 | Informational | Maintainability, defence in depth, or operational readiness |
 
-Label each item confirmed or suspected. A suspected risk stays suspected until the behaviour is observed.
+Label each item confirmed or suspected. A suspected risk stays suspected until the behaviour is observed. Before confirming a finding, try to disprove it with [references/finding-verification.md](references/finding-verification.md): look for the guard that would stop it, check that the path is reachable, and test both the denied and the allowed case.
 
 ### 5. Record findings
 
-For every finding record: ID, title, severity, confidence, file and line, endpoint or component, description, root cause, preconditions, impact, expected behaviour, observed behaviour, safe reproduction using synthetic data, remediation, OWASP or CWE reference when known, regression test, and verification status.
+For every finding record: ID, title, severity, confidence, file and line, endpoint or component, description, root cause, preconditions, impact, expected behaviour, observed behaviour, safe reproduction using synthetic data, remediation, OWASP or CWE reference when known, regression test, verification status, and the challenge: how you tried to disprove it.
 
 Statuses are PASS, FAIL, NOT TESTED, BLOCKED, or NOT APPLICABLE. Follow [references/verification-protocol.md](references/verification-protocol.md). Static evidence and runtime evidence are different. A file and line can support a finding. A critical authorisation, tenant, payment, or database-policy check PASSes only with a command that was executed on the recorded commit. An unexecuted test is NOT TESTED. Evidence from an older commit is stale after a material change.
 
@@ -203,7 +202,7 @@ Do not make irreversible production changes automatically.
 
 ## Release decision
 
-When a release decision is requested, fill [templates/release-checklist.md](templates/release-checklist.md) and `docs/audits/audit-result.json`, then run the skill's `scripts/release_gate.py` with `--head` set to the current commit. Without `--head` the script reads HEAD from the repository that holds the audit file, and exits 2 when it cannot. The audit result lists every check in [schemas/mandatory-checks.json](schemas/mandatory-checks.json); every PASS records the command, exit code, observed result, and commit; every NOT APPLICABLE gives a justification; and every accepted risk names an owner and an approver. Commit the code before running the gate, because any uncommitted change other than the audit reports is NO-GO, and so is a working tree the gate cannot check. If the script cannot run in this environment, the decision is NO-GO and the reason is that the gate was not executed. The script's decision is the release decision:
+When a release decision is requested, fill [templates/release-checklist.md](templates/release-checklist.md) and `docs/audits/audit-result.json`, then run the skill's `scripts/release_gate.py` with `--head` set to the current commit. Without `--head` the script reads HEAD from the repository that holds the audit file, and exits 2 when it cannot. The audit result lists every check in [schemas/mandatory-checks.json](schemas/mandatory-checks.json); every PASS records the command, exit code, observed result, and commit; every NOT APPLICABLE gives a justification; and every accepted risk names an owner and an approver. Commit the code before running the gate, because any uncommitted change other than the audit reports is NO-GO, and so is a working tree the gate cannot check. If the script cannot run in this environment, the decision is NO-GO and the reason is that the gate was not executed. For a release, recommend running the gate in CI with `templates/ci/guardian-release.yml`, which re-runs every recorded command and passes only what CI saw pass. See [docs/ci.md](docs/ci.md). During an audit, propose the workflow; add it only in Fix and Verify, with approval. The script's decision is the release decision:
 
 - **GO**: Mandatory checks passed and no unresolved release-blocking finding remains.
 - **CONDITIONAL GO**: No unresolved critical or high-severity security finding remains, and documented lower-priority risks are explicitly accepted.
@@ -229,8 +228,6 @@ Watch for these when the application was generated or changed with an AI coding 
 - An AI tool or retrieval path can reach data the current user cannot access.
 - A single request is correct and concurrent requests duplicate charges, orders, or rewards.
 - The suite passes because it never exercises another user, invalid input, or a failed dependency.
-- Analytics or an advertising tag runs before the user agrees, or the privacy notice omits a service the code sends personal data to.
-- Account deletion hides the profile and leaves the data. A subscription starts in one step and cannot be stopped the same way.
 
 ## Standards
 
@@ -251,9 +248,6 @@ Use the version that matches the repository:
 - [Playwright emulation](https://playwright.dev/docs/emulation)
 - [Firebase Security Rules](https://firebase.google.com/docs/rules)
 - [OWASP Webhook Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Webhook_Security_Cheat_Sheet.html)
-- [GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj)
-- [COPPA Rule](https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-312)
-- [ROSCA, 15 USC 8403](https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section8403&num=0&edition=prelim)
 
 ## Final instruction
 

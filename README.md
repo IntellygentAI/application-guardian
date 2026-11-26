@@ -71,12 +71,6 @@ Asking the agent to be careful is not enough. Application Guardian tells it exac
 **Real-world use**
 - Lost connections, double taps, very long input, other languages, time zones, denied permissions, and screen readers
 
-**Notices and third parties**
-- A privacy notice that omits a service the code sends personal data to
-- A delete button that hides the account and leaves the data
-- Analytics or advertising tags that run before the user agrees
-- A subscription that is easy to start and hard to stop
-
 The full checklists are in `references/`. Each file covers one area, and the agent reads it only when that area applies.
 
 ## The release gate
@@ -94,8 +88,13 @@ It returns NO-GO when:
 - the evidence was recorded on a different commit, or files other than the audit reports have uncommitted changes
 - the audit file is not in a Git repository, or `git status` fails
 - an accepted risk has no owner and approver, or is high or critical
+- in CI, a recorded command was not re-run, or failed when CI ran it
 
 CONDITIONAL GO means only medium or low risks remain, and each was accepted by a named person. A GO written in a report does not count. Only the script's output does.
+
+### In CI
+
+Run locally, the gate trusts the commands the audit says it ran. In CI it checks them. `templates/ci/guardian-release.yml` is a GitHub Actions workflow you copy into your repository. It re-runs every recorded command on the exact commit, without a shell or secrets, and the gate passes only what CI saw pass. Setup, the branch protection it needs, and what it does not protect against are in [docs/ci.md](docs/ci.md).
 
 ## Install
 
@@ -167,7 +166,7 @@ On 2026-11-26 the skill was tested against the same agent without it, on 18 smal
 - It does not print secret values or customer data in reports.
 - It does not deploy, rotate credentials, change live data, or run destructive migrations without your approval.
 - A GO is not proof that the application has no vulnerabilities. It means the mandatory checks ran and passed on that commit.
-- The gate checks that evidence is complete and current. It cannot prove a recorded command really ran or that an approval is genuine. Run the tests and the gate in CI, and add accepted risks in a reviewed pull request.
+- Run locally, the gate cannot prove a recorded command really ran. In CI it can, but only if the workflow, the skill, and the audit file need code-owner review to change. It cannot prove an approval is genuine; add accepted risks in a reviewed pull request.
 
 ## Repository layout
 
@@ -175,9 +174,9 @@ On 2026-11-26 the skill was tested against the same agent without it, on 18 smal
 | --- | --- |
 | `SKILL.md` | What the agent reads first: modes, rules, and the audit steps |
 | `references/` | Checks for each area and framework |
-| `scripts/` | Release gate, report validator, stack detector, scaffold |
+| `scripts/` | Release gate, CI evidence runner, report validator, stack detector, scaffold |
 | `schemas/` | Audit format and the mandatory check list |
-| `templates/` | Report templates |
+| `templates/` | Report templates, and the CI workflow and CODEOWNERS files |
 | `evals/` | Test cases and benchmark results |
 | `docs/` | Installation, compatibility, architecture, roadmap |
 

@@ -21,7 +21,12 @@ The version stays 0.4.0 until measured benchmarks exist.
 - `release_gate.py`: only the audit file and the six report files beside it may be uncommitted. Before, the whole folder holding the audit file was skipped, so an audit file saved next to code hid changes to that code.
 - Added five regression tests for the two changes above. Each fails on the previous gate.
 - `references/verification-protocol.md` and README: say what the gate cannot prove, and how CI and reviewed approvals close the gap.
-- `references/legal-exposure.md`: notices that match the data flow, erasure, children, cancellation, tracking consent, name searches, client secrets, provider spend caps, and licenses. Figures are taken from the GDPR text, the COPPA Rule, ROSCA, and the FTC's GoodRx and Epic orders. The vacated 2024 Negative Option Rule is not the cancellation standard.
+- `release_gate.py`: committing the audit reports no longer makes the evidence stale. A recorded commit stays current when it is an ancestor of HEAD and only the audit file and report files changed since. Before, a committed audit could never pass.
+- Added `scripts/ci_evidence.py`. In CI it re-runs every recorded runtime command without a shell, with a time limit, an allowlist of test runners, and no secrets in the environment, and writes the exit code and an output hash for each.
+- `release_gate.py --ci-evidence`: a runtime PASS or a fixed critical or high finding needs a passing CI run of the same command, on the same commit, in the same workflow run, with the audit file unchanged since.
+- Added `templates/ci/guardian-release.yml` (actions pinned to commit SHAs, read-only token, no `pull_request_target`) and `templates/ci/CODEOWNERS`, with setup and branch protection in `docs/ci.md`.
+- Added `references/finding-verification.md`: before confirming a finding, look for the guard that would stop it, check the path is reachable, and test the denied and allowed cases. Findings gain an optional `challenge` field.
+- Added 20 tests for the changes above. A recorded commit must be a commit ID; a name such as HEAD or a branch never counts as current.
 - `docs/benchmarks.md`: measure activation before detection.
 - Roadmap prompt: neutral, maintainer-facing wording.
 - `release_gate.py`: every check in the new `schemas/mandatory-checks.json` (25 checks, matching the release checklist) must appear once in `audit-result.json`. A missing, duplicated, or downgraded critical check is NO-GO.
