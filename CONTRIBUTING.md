@@ -25,7 +25,7 @@ Synthetic fixtures live in `evals/fixtures/`. They are not real applications and
 
 ## Licences of other projects
 
-Do not copy text or code from repositories whose licence is incompatible with MIT. Trail of Bits skills are CC BY-SA 4.0. Learn from the architecture. Do not paste their material into this repository.
+Do not copy text or code from repositories whose licence is incompatible with MIT, such as CC BY-SA. Write the change in your own words.
 
 ## Pull requests
 
