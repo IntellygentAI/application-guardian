@@ -45,6 +45,7 @@ The version stays 0.4.0 until measured benchmarks exist.
 - Hard benchmark pack: audit repositories now hold a small working app whose recorded tests pass when re-run, and the valid audit's NOT APPLICABLE check names an approver.
 - Benchmark on Claude Haiku 5.5 and Claude Sonnet 5.5. Benchmark docs now say that agent isolation relied on instructions, not file permissions.
 - Added 20 tests for the changes above. 19 fail on the previous code.
+- Added `references/orchestration.md`: how every task starts. Pin down the request, mode, scope, commit, and what done means; collect context with read-only commands; tie every claim to a file or a command; plan each step with its check; keep a list of what was and was not reviewed; and stop and ask instead of guessing. `SKILL.md`, the audit report template, and the README point to it.
 - `docs/benchmarks.md`: measure activation before detection.
 - Roadmap prompt: neutral, maintainer-facing wording.
 - `release_gate.py`: every check in the new `schemas/mandatory-checks.json` (25 checks, matching the release checklist) must appear once in `audit-result.json`. A missing, duplicated, or downgraded critical check is NO-GO.
