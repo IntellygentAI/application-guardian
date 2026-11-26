@@ -25,6 +25,7 @@ This maps the original specification and the later additions to the files that h
 | Addition | Where it lives |
 | --- | --- |
 | Fail-open defaults, JWT, MFA, passkeys, cryptography, traversal, deserialisation, prototype pollution, permission races | `references/security-testing.md` |
+| Server-side sessions versus stateless JWTs, refresh-token revocation, access after deletion, and logins that exist only in one process | `references/security-testing.md` |
 | Webhooks, GraphQL, WebSockets, cache isolation | `references/api-security.md` |
 | AI output handling | `references/ai-security.md` |
 | MCP and agent delegation | `references/agent-mcp-security.md` |
@@ -32,6 +33,8 @@ This maps the original specification and the later additions to the files that h
 | Mobile and PWA | `references/mobile-security.md` |
 | Retention and observability privacy | `references/data-privacy.md` |
 | Notices, erasure, children, cancellation, tracking consent, names, licenses | `references/legal-exposure.md` |
+| Terms, total price, refunds, cookie refusal, form consent, SDK load order, reviews, claims, business identity, email opt-out | `references/legal-exposure.md` |
+| WCAG 2.2 text alternatives, contrast ratios, and keyboard operation | `references/accessibility.md` |
 | Tenant switching and recovery objectives | `references/database-security.md` |
 | Static versus runtime evidence, freshness, deterministic decision | `references/verification-protocol.md` |
 | Framework notes | `references/framework-specific/` |
