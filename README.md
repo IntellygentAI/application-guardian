@@ -20,21 +20,58 @@ Application Guardian is an agent skill. Install it, and your coding agent review
 
 It works with any stack. Supabase, Firebase, Stripe, Next.js, Django, and FastAPI get extra checks when the repository uses them.
 
+## How it works
+
+1. You ask your agent for a scan or an audit.
+2. The agent works out your stack and reads only the checklists that apply to it.
+3. It tries each risk the way a real user could: a second account, the same request sent twice, a dropped connection. It records what it ran and what came back.
+4. It writes the findings to `docs/audits/`.
+5. `release_gate.py` reads that evidence and returns GO, CONDITIONAL GO, or NO-GO. On NO-GO you fix, retest, and run the gate again.
+
+```mermaid
+flowchart LR
+    ask([Ask for an audit]) --> test([Agent tests each risk])
+    test --> report([Evidence in docs/audits])
+    report --> gate{release_gate.py}
+    gate -->|GO| ship([Ready to release])
+    gate -->|NO-GO| fix([Fix and retest])
+    fix --> test
+```
+
+## Why it exists
+
+Apps written by AI coding agents often look finished and pass their own tests. The gaps are usually on the server, where nothing shows on screen. Two studies show the size of the problem:
+
+- In a Stanford user study (Perry et al., ACM CCS 2023), [36% of participants with an AI assistant wrote SQL-injectable code on the SQL task, compared with 7% without one](https://arxiv.org/abs/2211.03622). They were also more likely to believe their code was secure.
+- On the SusVibes benchmark of real repository tasks (Zhao et al., ICML 2026), [the best agent produced working code 57% of the time, but only 11.8% of its solutions were secure](https://icml.cc/virtual/2026/poster/61427). Adding security reminders to the prompt did not help much.
+
+Asking the agent to be careful is not enough. Application Guardian tells it exactly which code patterns to look for, and a release only passes when the checks ran on the code you are about to ship.
+
 ## What it checks
 
+**Access**
 - One user reading or changing another user's records, invoices, files, or messages
 - Admin actions that are hidden in the interface but still callable
-- Database policies that let any signed-in user read every row
-- Secret keys in frontend code, built bundles, or Git history
-- Prices, quantities, and payment status taken from the browser
-- Premium access granted from a checkout redirect instead of a verified payment event
-- Coupons, credits, and sign-ups that can be used twice by sending requests at the same time
-- SQL built by joining strings, including sort columns taken from the request
-- Private uploads in public storage
-- AI tools that can reach data the current user cannot
-- Lost connections, double taps, long input, other languages, time zones, denied permissions, and screen readers
+- Database rules that let any signed-in user read every row
 
-The full list is in `references/`. Each file covers one area, and the agent reads it only when that area applies.
+**Secrets and private data**
+- Secret keys in frontend code, built bundles, or Git history
+- Private uploads in public storage
+- AI assistants that can reach data the current user cannot
+
+**Money**
+- Prices, quantities, and payment status taken from the browser
+- Paid features unlocked by the checkout page instead of a confirmed payment from the provider
+- Coupons, credits, and sign-up bonuses used twice by sending requests at the same moment
+
+**Code and tests**
+- SQL built by joining strings, including sort columns taken from the request
+- Tests that only cover the happy path and never try another user, bad input, or a failed service
+
+**Real-world use**
+- Lost connections, double taps, very long input, other languages, time zones, denied permissions, and screen readers
+
+The full checklists are in `references/`. Each file covers one area, and the agent reads it only when that area applies.
 
 ## The release gate
 
@@ -79,8 +116,8 @@ Ask your agent:
 | --- | --- |
 | `Run Guardian quick scan` | Checks the current change and the areas it touches |
 | `Run Application Guardian full audit` | Checks the whole application |
-| `Run Guardian database security audit` | Policies, grants, and tenant isolation |
-| `Run Guardian payment audit` | Prices, webhooks, coupons, and entitlements |
+| `Run Guardian database security audit` | Who can read and write each table, and whether customers' data stays separate |
+| `Run Guardian payment audit` | Prices, payment confirmations, coupons, and access to paid features |
 | `Run Guardian AI security audit` | Prompts, tools, data access, and cost limits |
 | `Run Guardian fix and verify` | Fixes confirmed findings and adds a test for each |
 | `Run Guardian release gate` | Runs the gate and reports the decision |
@@ -147,3 +184,5 @@ The checks draw on [OWASP ASVS](https://owasp.org/projects/asvs/), the [OWASP We
 ## License
 
 [MIT](LICENSE). Copyright (c) 2026 IntellygentAI.
+
+Made by [Intellygent AI](https://intellygent.ai/) in London.

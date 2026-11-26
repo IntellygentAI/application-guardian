@@ -16,6 +16,7 @@ The version stays 0.4.0 until measured benchmarks exist.
 - `references/security-testing.md`: named the SQL shapes that AI-generated code produces (string-built SQL, ORM escape hatches with interpolation, identifiers taken from the request, dynamic SQL in database functions, second-order input, NoSQL operators), their safe forms, and runtime checks that need no exploit payload.
 - Added a matched pair of SQL evaluation fixtures: a string-built query with a request-controlled sort, and a bound query with an allowlisted sort that must not be reported.
 - README rewritten around what the skill checks and how the release gate decides.
+- README explains how a run works and why the skill exists, and groups the checks by area.
 - `docs/benchmarks.md`: measure activation before detection.
 - Roadmap prompt: neutral, maintainer-facing wording.
 - `release_gate.py`: every check in the new `schemas/mandatory-checks.json` (25 checks, matching the release checklist) must appear once in `audit-result.json`. A missing, duplicated, or downgraded critical check is NO-GO.
