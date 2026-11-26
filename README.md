@@ -85,7 +85,8 @@ It returns NO-GO when:
 - any of the [25 mandatory checks](schemas/mandatory-checks.json) is missing, failed, or not run
 - a check passed without a recorded command, exit code, result, and commit
 - a critical check passed on code review alone, without a test that ran
-- the evidence was recorded on a different commit, or there are uncommitted changes
+- the evidence was recorded on a different commit, or files other than the audit reports have uncommitted changes
+- the audit file is not in a Git repository, or `git status` fails
 - an accepted risk has no owner and approver, or is high or critical
 
 CONDITIONAL GO means only medium or low risks remain, and each was accepted by a named person. A GO written in a report does not count. Only the script's output does.
@@ -160,6 +161,7 @@ On 2026-11-26 the skill was tested against the same agent without it, on 18 smal
 - It does not print secret values or customer data in reports.
 - It does not deploy, rotate credentials, change live data, or run destructive migrations without your approval.
 - A GO is not proof that the application has no vulnerabilities. It means the mandatory checks ran and passed on that commit.
+- The gate checks that evidence is complete and current. It cannot prove a recorded command really ran or that an approval is genuine. Run the tests and the gate in CI, and add accepted risks in a reviewed pull request.
 
 ## Repository layout
 
