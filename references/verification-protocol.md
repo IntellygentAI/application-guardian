@@ -38,11 +38,13 @@ Schema version `1.1`. Start from `scripts/scaffold_audit.py`, which lists every 
 
 - **Every mandatory check.** The 25 IDs in `schemas/mandatory-checks.json` must each appear once. A missing or duplicated ID is NO-GO. A check marked critical there cannot be recorded as non-critical. App-specific checks may be added with new IDs.
 - **A recorded run for every runtime PASS:** `commit` equal to HEAD, `command`, `exit_code` of `0`, `observed`, and `executed_at`. A static PASS, allowed only for non-critical checks, still needs `commit` and `observed`.
-- **A justification for every NOT APPLICABLE**, in `justification`. For example: "The application takes no payments."
+- **A justification for every NOT APPLICABLE**, in `justification`. For example: "The application takes no payments." A critical check marked NOT APPLICABLE also needs `approved_by`, the person who confirmed it does not apply. At least one critical check must PASS with an executed test.
+- **A real test command for every critical PASS and every fixed critical or high finding.** The command must start with a test runner, such as `pytest`, `npm`, `npx vitest`, or `go`, and must not run inline code such as `python -c` or `node -e`. Commands like `true` or `echo` are NO-GO. Pass `--allow-runner NAME` for a runner the gate does not know.
+- **A challenge for every critical or high finding closed as `false_positive`**, saying which guard stops it and how that was tested.
 - **A verification run for every fixed critical or high finding**, with the same fields as a runtime PASS, on the current commit. A fix verified on an older commit is stale.
 - **An approval record for every accepted risk** in `accepted_risks`: `id` of the accepted medium or low finding, `owner`, `approved_by`, `approved_at`, and `reason`. A record that matches no accepted finding is NO-GO.
 
-The gate also runs `git status` in the repository that holds the audit file. Only the audit file and the six report files beside it (`application-audit.md`, `security-findings.md`, `threat-model.md`, `test-matrix.md`, `remediation-plan.md`, `production-readiness.md`) may be uncommitted. Any other changed or untracked file, including one in the audit folder, means the checks did not run against what would ship, and the decision is NO-GO until it is committed and the checks are re-run. If the audit file is not in a Git repository, or `git status` fails, the gate cannot confirm what would ship, and the decision is NO-GO.
+The gate also runs `git status`, with rename detection off and submodules included, in the repository that holds the audit file. Files hidden from `git status` with `skip-worktree` or `assume-unchanged` count as changed. Only the audit file and the six report files beside it (`application-audit.md`, `security-findings.md`, `threat-model.md`, `test-matrix.md`, `remediation-plan.md`, `production-readiness.md`) may be uncommitted. Any other changed or untracked file, including one in the audit folder, means the checks did not run against what would ship, and the decision is NO-GO until it is committed and the checks are re-run. If the audit file is not in a Git repository, or `git status` fails, the gate cannot confirm what would ship, and the decision is NO-GO.
 
 ### What the gate cannot prove
 
@@ -81,7 +83,12 @@ The script is the decision. It returns exit 0 for GO and CONDITIONAL GO, and exi
 | Critical or high finding marked accepted | NO-GO |
 | Failed, blocked, or unexecuted mandatory check | NO-GO |
 | Missing, duplicated, or downgraded mandatory check | NO-GO |
-| NOT APPLICABLE without a justification | NO-GO |
+| NOT APPLICABLE without a justification, or a critical one without `approved_by` | NO-GO |
+| Every critical check NOT APPLICABLE, or none passed with an executed test | NO-GO |
+| Critical PASS or critical/high fix whose command is not a test runner, or runs inline code | NO-GO |
+| Critical or high finding closed as false positive without a challenge | NO-GO |
+| Accepted risk past its `expires_at` date | NO-GO |
+| `--head` is not the checked-out commit | NO-GO |
 | PASS without a recorded run (command, exit code 0, observed result, timestamp, commit) | NO-GO |
 | Critical control with only static evidence | NO-GO |
 | Fixed critical or high finding without a passing run on HEAD | NO-GO |

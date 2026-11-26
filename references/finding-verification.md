@@ -59,6 +59,8 @@ Put a short summary in the finding's `challenge` field: where you looked for a g
 
 A reviewer should be able to repeat the check from this summary.
 
+For a critical or high finding closed as `false_positive`, the challenge is required: the gate returns NO-GO without it.
+
 ## When another agent is available
 
 If your environment can start a separate agent or reviewer, give it only the claim and the location, not your reasoning, and ask it to find the guard. A finding that survives an independent attempt to disprove it is stronger. Record that it was independently checked in `challenge`.

@@ -66,5 +66,5 @@ Setup:
 
 1. `python evals/benchmark/hard_pack.py --out /tmp/bench2 --key /var/tmp/bench2-key.json`
 2. Copy the skill files listed above to `/tmp/bench2/skill/application-guardian/`.
-3. Make the key and every other copy of this repository unreadable to the agents.
+3. Keep the key and every other copy of this repository outside the folders the agents may open. The agents run as the same user, so the prompt's rules, not file permissions, keep them out.
 4. `python evals/benchmark/grade_hard.py --key /var/tmp/bench2-key.json --outputs /tmp/bench2/out`
