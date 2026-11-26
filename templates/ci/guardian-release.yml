@@ -1,0 +1,69 @@
+# Application Guardian release gate for GitHub Actions.
+#
+# Copy this file to .github/workflows/guardian-release.yml in your
+# application's repository. Read docs/ci.md in the skill first: this workflow
+# is only trustworthy when the workflow, the skill folder, and the audit file
+# are protected by required code-owner review.
+#
+# What it does: checks out the exact commit, re-runs every command that the
+# audit says proved a check, records the results itself, and runs the release
+# gate against that record. A PASS that CI did not see pass is NO-GO.
+
+name: Guardian release gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Read-only token. The job needs nothing more.
+permissions:
+  contents: read
+
+jobs:
+  guardian-release:
+    name: guardian-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # Where the skill is committed in this repository. npx skills add puts it here.
+      GUARDIAN: .agents/skills/application-guardian
+      AUDIT: docs/audits/audit-result.json
+    steps:
+      - name: Check out the commit under review
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # For a pull request, test the branch tip, not GitHub's merge commit.
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          # History lets the gate see that only audit reports changed since the audited commit.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      # Replace this step with what your tests need, for example
+      # "npm ci" or "pip install -r requirements.txt". It fails until you do,
+      # so the gate never runs against an application that was not set up.
+      - name: Install the application's test dependencies
+        run: |
+          echo "Edit the install step in .github/workflows/guardian-release.yml before using this workflow."
+          exit 1
+
+      - name: Re-run the recorded commands
+        run: python "$GUARDIAN/scripts/ci_evidence.py" "$AUDIT" --out "$RUNNER_TEMP/guardian"
+
+      - name: Release gate
+        run: python "$GUARDIAN/scripts/release_gate.py" "$AUDIT" --ci-evidence "$RUNNER_TEMP/guardian/ci-evidence.json"
+
+      - name: Keep the evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: guardian-evidence
+          path: ${{ runner.temp }}/guardian
+          if-no-files-found: warn
+          retention-days: 90

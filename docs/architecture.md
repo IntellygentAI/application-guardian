@@ -25,6 +25,8 @@ flowchart TD
 | `scripts/scaffold_audit.py` | Creates `docs/audits` without overwriting |
 | `scripts/validate_report.py` | Checks an audit JSON file against the schema |
 | `scripts/release_gate.py` | Calculates GO, CONDITIONAL GO, or NO-GO |
+| `scripts/ci_evidence.py` | Re-runs the recorded commands in CI and writes evidence the gate can check |
+| `templates/ci/` | A GitHub Actions workflow and a CODEOWNERS file for running the gate in CI |
 | `evals/` | Synthetic fixtures, expected findings, and the with-and-without benchmark in `evals/benchmark/` |
 
 Quick Scan, Full Audit, and Release Gate do not edit the application. Fix and Verify edits only a confirmed finding, and only when remediation was requested.

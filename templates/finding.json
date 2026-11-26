@@ -11,5 +11,6 @@
   "exit_code": 1,
   "expected": "what a safe result looks like",
   "observed": "what happened, without secrets or private customer data",
-  "executed_at": "2026-01-01T00:00:00Z"
+  "executed_at": "2026-01-01T00:00:00Z",
+  "challenge": "where you looked for a guard, whether the path is reachable, and the allowed and denied test results"
 }

@@ -48,8 +48,10 @@ The gate also runs `git status` in the repository that holds the audit file. Onl
 
 The gate checks that the evidence is complete, consistent, and recorded on the current commit. It cannot prove that a recorded command really ran, that its output was not edited, or that an approval came from the person named. An agent could write a convincing record without running anything. Two habits close most of that gap:
 
-- Run the tests and the gate in CI on the release commit, so the passing run comes from CI and not from the audit file.
+- Run the tests and the gate in CI on the release commit, so the passing run comes from CI and not from the audit file. `scripts/ci_evidence.py` and `templates/ci/guardian-release.yml` do this. With `--ci-evidence`, the gate accepts a runtime PASS only when CI ran the same command on the same commit, in the same workflow run, and it passed. See [docs/ci.md](../docs/ci.md).
 - Add accepted risks in a pull request that the named approver reviews, so the approval is in the review history.
+
+Committing the audit reports creates a new commit. Evidence recorded on the commit before stays current when the only files that changed since are the audit file and its report files, and that commit is an ancestor of HEAD. Any other change makes it stale.
 
 ## Finding labels
 
@@ -83,7 +85,8 @@ The script is the decision. It returns exit 0 for GO and CONDITIONAL GO, and exi
 | PASS without a recorded run (command, exit code 0, observed result, timestamp, commit) | NO-GO |
 | Critical control with only static evidence | NO-GO |
 | Fixed critical or high finding without a passing run on HEAD | NO-GO |
-| Audit or check commit differs from HEAD | NO-GO |
+| Audit or check commit differs from HEAD, beyond committing the audit reports | NO-GO |
+| With `--ci-evidence`: a recorded run that CI did not repeat, or that failed in CI | NO-GO |
 | Uncommitted changes other than the audit reports | NO-GO |
 | Working tree cannot be checked (not a Git repository, or `git status` failed) | NO-GO |
 | Open medium or low finding without acceptance | NO-GO |
