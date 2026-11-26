@@ -1,0 +1,1 @@
+{"expect_finding": true, "severity": "high", "summary": "The charged amount comes from the request body instead of a server-side catalogue price."}

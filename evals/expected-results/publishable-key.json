@@ -1,0 +1,1 @@
+{"expect_finding": false, "summary": "A publishable client key in frontend code is intentional public configuration."}

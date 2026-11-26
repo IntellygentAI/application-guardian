@@ -111,7 +111,14 @@ Use this schema in `security-findings.md` for every finding:
 | Expected | |
 | Observed | |
 | Safe reproduction | Synthetic data only. No secrets. |
+| Evidence type | static / runtime / none |
+| Commit | Git commit that was tested |
+| Command | |
+| Exit code | |
+| Executed at | |
 | Remediation | |
 | Reference | OWASP / CWE |
 | Regression test | |
 | Verification | Not verified / Verified with evidence |
+
+The release decision is the output of `scripts/release_gate.py` on `audit-result.json`. Do not write a decision that disagrees with that command.

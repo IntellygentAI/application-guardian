@@ -1,0 +1,1 @@
+{"expect_finding": false, "summary": "The handler returns 404 when the invoice belongs to someone else. Do not report an IDOR."}

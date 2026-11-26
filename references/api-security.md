@@ -26,4 +26,14 @@ Check broken object-level authorisation, broken function-level authorisation, br
 
 Return only the fields the client needs. Do not return entire database records, other users' columns, or internal metadata by default.
 
-Align this inventory with the authorisation matrix in `templates/test-matrix.md`. An endpoint missing from the matrix is an assessment gap, not an implicit pass.
+Align this inventory with the authorisation matrix in [test-matrix.md](../templates/test-matrix.md). An endpoint missing from the matrix is an assessment gap, not an implicit pass.
+
+## Webhooks
+
+Signature checks are necessary and not sufficient. Also require a timestamp tolerance, replay rejection using the event ID, and a documented path to rotate the signing secret. A webhook that changes state verifies the tenant and the referenced object.
+
+## GraphQL, WebSockets, and caches
+
+- GraphQL queries have a depth and complexity limit. Each resolver checks the object and the field. Batching does not bypass those checks.
+- A WebSocket authenticates the connection and authorises each subscription or message. Tenant filters apply to the events that are pushed.
+- Shared caches vary on the user or tenant. A private response is not stored under a URL that another user can fetch. CDN and browser caches follow the caching rules in the browser section of [security-testing.md](security-testing.md).

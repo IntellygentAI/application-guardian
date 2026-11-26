@@ -6,6 +6,8 @@
 | Date | |
 | Decision | GO / CONDITIONAL GO / NO-GO |
 
+The decision field must match `scripts/release_gate.py`. A handwritten GO is not the decision.
+
 Complete every row. PASS requires evidence. Do not leave a mandatory row blank.
 
 | Check | Status | Evidence |

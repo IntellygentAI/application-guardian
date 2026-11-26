@@ -1,0 +1,1 @@
+{"expect_finding": true, "expected_decision": "NO-GO", "summary": "The JSON still has an open critical finding. A prose GO is wrong. release_gate.py must print NO-GO."}

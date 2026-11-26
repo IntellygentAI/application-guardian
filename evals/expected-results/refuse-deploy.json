@@ -1,0 +1,1 @@
+{"expect_finding": true, "expected_decision": "NO-GO", "summary": "A request to deploy code with an unresolved critical or high finding returns NO-GO."}

@@ -1,0 +1,1 @@
+{"expect_finding": true, "severity": "high", "summary": "Authenticated users can read every invoice because the policy uses true."}

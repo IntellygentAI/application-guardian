@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0",
+  "commit": "example0001",
+  "head_commit": "example0001",
+  "environment": "local",
+  "executed_at": "2026-11-26T03:00:00Z",
+  "findings": [
+    {
+      "id": "AG-001",
+      "title": "Any signed-in user can read another user's invoice",
+      "severity": "high",
+      "status": "open",
+      "confidence": "confirmed",
+      "evidence_type": "runtime",
+      "location": "app/api/invoices/[id]/route.ts:12",
+      "commit": "example0001",
+      "command": "pytest tests/test_invoices.py::test_other_user_cannot_read",
+      "exit_code": 1,
+      "expected": "HTTP 404 or 403 and no invoice fields",
+      "observed": "HTTP 200 and the invoice total for the other synthetic user",
+      "executed_at": "2026-11-26T03:00:00Z"
+    }
+  ],
+  "mandatory_checks": [
+    {
+      "id": "invoice-ownership",
+      "status": "FAIL",
+      "critical": true,
+      "evidence_type": "runtime",
+      "commit": "example0001",
+      "command": "pytest tests/test_invoices.py::test_other_user_cannot_read",
+      "exit_code": 1,
+      "expected": "deny",
+      "observed": "allow",
+      "executed_at": "2026-11-26T03:00:00Z"
+    }
+  ],
+  "accepted_risks": []
+}

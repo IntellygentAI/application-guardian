@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "audit.schema.json",
+  "title": "Application Guardian audit result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "commit",
+    "environment",
+    "executed_at",
+    "findings",
+    "mandatory_checks",
+    "accepted_risks"
+  ],
+  "properties": {
+    "schema_version": {"type": "string", "const": "1.0"},
+    "commit": {"type": "string", "minLength": 1},
+    "head_commit": {"type": "string"},
+    "environment": {"type": "string", "enum": ["local", "authorised-staging"]},
+    "executed_at": {"type": "string", "minLength": 1},
+    "findings": {
+      "type": "array",
+      "items": {"$ref": "finding.schema.json"}
+    },
+    "mandatory_checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "status", "critical", "evidence_type"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "status": {
+            "type": "string",
+            "enum": ["PASS", "FAIL", "NOT TESTED", "BLOCKED", "NOT APPLICABLE"]
+          },
+          "critical": {"type": "boolean"},
+          "evidence_type": {"type": "string", "enum": ["static", "runtime", "none"]},
+          "commit": {"type": "string"},
+          "command": {"type": "string"},
+          "exit_code": {"type": ["integer", "null"]},
+          "expected": {"type": "string"},
+          "observed": {"type": "string"},
+          "executed_at": {"type": "string"}
+        }
+      }
+    },
+    "accepted_risks": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    }
+  }
+}

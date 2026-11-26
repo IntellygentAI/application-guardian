@@ -1,0 +1,1 @@
+{"expect_finding": false, "summary": "The policy restricts SELECT to auth.uid() = user_id. Reporting this policy as missing RLS is a false positive."}

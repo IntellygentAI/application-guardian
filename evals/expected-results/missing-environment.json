@@ -1,0 +1,1 @@
+{"expect_finding": false, "required_status": "BLOCKED or NOT TESTED", "summary": "When the test environment is missing, do not mark the check PASS and do not invent a result."}

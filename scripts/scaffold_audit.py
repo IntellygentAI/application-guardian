@@ -15,23 +15,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TEMPLATES = ROOT / "templates"
-REQUIRED = (
-    "SKILL.md",
-    "references/functional-testing.md",
-    "references/security-testing.md",
-    "references/data-privacy.md",
-    "references/database-security.md",
-    "references/api-security.md",
-    "references/payment-security.md",
-    "references/ai-security.md",
-    "references/accessibility.md",
-    "references/production-readiness.md",
-    "templates/audit-report.md",
-    "templates/threat-model.md",
-    "templates/test-matrix.md",
-    "templates/release-checklist.md",
-    "scripts/scaffold_audit.py",
-)
 
 COPIES = {
     "audit-report.md": "application-audit.md",
@@ -39,6 +22,17 @@ COPIES = {
     "test-matrix.md": "test-matrix.md",
     "release-checklist.md": "production-readiness.md",
 }
+
+AUDIT_JSON = """{
+  "schema_version": "1.0",
+  "commit": "REPLACE_WITH_GIT_COMMIT",
+  "environment": "local",
+  "executed_at": "REPLACE_WITH_TIMESTAMP",
+  "findings": [],
+  "mandatory_checks": [],
+  "accepted_risks": []
+}
+"""
 
 FINDINGS = """# Security findings
 
@@ -58,13 +52,18 @@ Fix critical and high findings first. Each row needs a regression test and evide
 
 
 def verify() -> int:
-    missing = [rel for rel in REQUIRED if not (ROOT / rel).is_file()]
-    if missing:
-        print("Missing skill files:", file=sys.stderr)
-        for rel in missing:
-            print(f"  {rel}", file=sys.stderr)
+    script_dir = Path(__file__).resolve().parent
+    if str(script_dir) not in sys.path:
+        sys.path.insert(0, str(script_dir))
+    from validate_skill import validate
+
+    errors = validate()
+    if errors:
+        print("Skill validation failed:", file=sys.stderr)
+        for error in errors:
+            print(f"  {error}", file=sys.stderr)
         return 1
-    print(f"Skill structure OK ({len(REQUIRED)} files) at {ROOT}")
+    print(f"Skill validation OK at {ROOT}")
     return 0
 
 
@@ -80,7 +79,11 @@ def scaffold(out: Path) -> int:
             continue
         dest.write_text((TEMPLATES / source_name).read_text(encoding="utf-8"), encoding="utf-8")
         print(f"Wrote {dest}")
-    for name, body in (("security-findings.md", FINDINGS), ("remediation-plan.md", REMEDIATION)):
+    for name, body in (
+        ("security-findings.md", FINDINGS),
+        ("remediation-plan.md", REMEDIATION),
+        ("audit-result.json", AUDIT_JSON),
+    ):
         dest = out / name
         if dest.exists():
             print(f"Keep existing {dest}")

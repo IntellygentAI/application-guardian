@@ -1,16 +1,20 @@
 ---
 name: application-guardian
 description: >-
-  Assesses applications for functional defects, security, privacy, database
-  access control, API authorisation, payment integrity, AI safety,
-  accessibility, and production readiness. Use when creating or modifying an
-  application, feature, API, authentication, permissions, database schema or
-  policy, file upload, payment flow, or AI integration; when installing
-  dependencies, preparing a deployment, reviewing a pull request, fixing a
-  bug, or running a security audit. Invoke as Application Guardian full audit,
-  quick scan, database security audit, payment audit, AI security audit, fix
-  and verify, or release gate. Applies OWASP ASVS, WSTG, API Security, GenAI
-  security, NIST SSDF, and WCAG 2.2. A successful build is not proof of security.
+  Audits, tests, secures, and verifies applications for production readiness.
+  Use when building or changing a feature, API, authentication flow, database
+  policy, payment, file upload, or AI integration; when reviewing code, fixing
+  a bug, installing dependencies, or preparing a deployment. Detects broken
+  access control, data exposure, injection, business-logic abuse, accessibility
+  defects, and real-world failure conditions. Supports quick scan, full audit,
+  fix and verify, and an evidence-based release gate.
+license: MIT
+compatibility: >-
+  Python 3.11 or newer is required to run the scripts. The instructions
+  themselves are Markdown and need no extra packages.
+metadata:
+  author: IntellygentAI
+  version: "0.4.0"
 ---
 
 # Application Guardian
@@ -55,9 +59,11 @@ Selection:
 1. If the user names a mode or domain, use that.
 2. Domain commands: database security audit reads [references/database-security.md](references/database-security.md); payment audit reads [references/payment-security.md](references/payment-security.md); AI security audit reads [references/ai-security.md](references/ai-security.md).
 3. Otherwise use Full Audit when there is no prior audit or the application is new.
-4. Otherwise use Quick Scan for incremental changes, and read only the references the diff actually touches.
+4. Otherwise use Quick Scan for incremental changes, and read only the references the diff actually touches. A documentation-only or comment-only diff does not start a Full Audit. If that diff touches no trust boundary, record the security domains as NOT APPLICABLE and stop.
 5. Fix and Verify starts from confirmed findings. Do not rewrite the application before those findings are recorded.
-6. Release Gate reads [references/production-readiness.md](references/production-readiness.md) and fills [templates/release-checklist.md](templates/release-checklist.md).
+6. Release Gate reads [references/production-readiness.md](references/production-readiness.md), [references/verification-protocol.md](references/verification-protocol.md), and fills [templates/release-checklist.md](templates/release-checklist.md).
+
+Quick Scan, Full Audit, and Release Gate are read-only. They do not change application source, dependencies, CI, or production configuration. Fix and Verify may change only the code required for a confirmed finding, after the user has asked for remediation. If the repository has no test runner, propose the smallest setup and wait for approval before adding a dependency. Run `scripts/detect_stack.py` on the application and read each framework file it prints.
 
 ## Mandatory rules
 
@@ -89,6 +95,18 @@ Read a reference before assessing that domain. Skip a conditional section when t
 | Prompt injection, isolation, cost | [references/ai-security.md](references/ai-security.md) |
 | WCAG 2.2 AA | [references/accessibility.md](references/accessibility.md) |
 | Dependencies, cloud, rate limits, observability, performance, tests | [references/production-readiness.md](references/production-readiness.md) |
+| Evidence, freshness, and release calculation | [references/verification-protocol.md](references/verification-protocol.md) |
+| Threat-modelling method | [references/threat-modelling.md](references/threat-modelling.md) |
+| Mobile clients and service workers | [references/mobile-security.md](references/mobile-security.md) |
+| MCP, tools, and agent delegation | [references/agent-mcp-security.md](references/agent-mcp-security.md) |
+| Supply chain, CI, email, SMS, jobs, flags, DNS | [references/supply-chain-security.md](references/supply-chain-security.md) |
+| Next.js | [references/framework-specific/nextjs.md](references/framework-specific/nextjs.md) |
+| React | [references/framework-specific/react.md](references/framework-specific/react.md) |
+| Supabase | [references/framework-specific/supabase.md](references/framework-specific/supabase.md) |
+| Firebase | [references/framework-specific/firebase.md](references/framework-specific/firebase.md) |
+| Stripe | [references/framework-specific/stripe.md](references/framework-specific/stripe.md) |
+| Django | [references/framework-specific/django.md](references/framework-specific/django.md) |
+| FastAPI | [references/framework-specific/fastapi.md](references/framework-specific/fastapi.md) |
 
 ## Audit workflow
 
@@ -112,7 +130,7 @@ Separate what is known, assumed, and unavailable. Do not invent infrastructure y
 
 ### 2. Build a threat model
 
-Use [templates/threat-model.md](templates/threat-model.md). Identify assets, sensitive data, entry points, trust boundaries, roles, integrations, privileged operations, money movement, abuse cases, and failure scenarios. Use STRIDE where it clarifies the risk: spoofing, tampering, repudiation, information disclosure, denial of service, elevation of privilege.
+Use [templates/threat-model.md](templates/threat-model.md) and [references/threat-modelling.md](references/threat-modelling.md). Identify assets, sensitive data, entry points, trust boundaries, roles, integrations, privileged operations, money movement, abuse cases, and failure scenarios. Use STRIDE where it clarifies the risk: spoofing, tampering, repudiation, information disclosure, denial of service, elevation of privilege.
 
 Name the most damaging realistic failures for this application.
 
@@ -142,7 +160,7 @@ Label each item confirmed or suspected. A suspected risk stays suspected until t
 
 For every finding record: ID, title, severity, confidence, file and line, endpoint or component, description, root cause, preconditions, impact, expected behaviour, observed behaviour, safe reproduction using synthetic data, remediation, OWASP or CWE reference when known, regression test, and verification status.
 
-Statuses are PASS, FAIL, NOT TESTED, BLOCKED, or NOT APPLICABLE. PASS requires evidence: a test name, command and result, or file and line showing the control. An unexecuted test is NOT TESTED.
+Statuses are PASS, FAIL, NOT TESTED, BLOCKED, or NOT APPLICABLE. Follow [references/verification-protocol.md](references/verification-protocol.md). Static evidence and runtime evidence are different. A file and line can support a finding. A critical authorisation, tenant, payment, or database-policy check PASSes only with a command that was executed on the recorded commit. An unexecuted test is NOT TESTED. Evidence from an older commit is stale after a material change.
 
 ### 6. Write the artefacts
 
@@ -155,7 +173,8 @@ docs/audits/
 ├── threat-model.md
 ├── test-matrix.md
 ├── remediation-plan.md
-└── production-readiness.md
+├── production-readiness.md
+└── audit-result.json
 ```
 
 Fill them from [templates/audit-report.md](templates/audit-report.md), [templates/threat-model.md](templates/threat-model.md), [templates/test-matrix.md](templates/test-matrix.md), and [templates/release-checklist.md](templates/release-checklist.md).
@@ -180,19 +199,19 @@ Do not make irreversible production changes automatically.
 
 ## Release decision
 
-When a release decision is requested, complete the checklist in [templates/release-checklist.md](templates/release-checklist.md) and return one of:
+When a release decision is requested, fill [templates/release-checklist.md](templates/release-checklist.md) and `docs/audits/audit-result.json`, then run the skill's `scripts/release_gate.py` with `--head` set to the current commit. The script's decision is the release decision:
 
 - **GO** — Mandatory checks passed and no unresolved release-blocking finding remains.
-- **CONDITIONAL GO** — No unresolved critical or high-severity security finding remains, and documented lower-priority risks need explicit acceptance.
-- **NO-GO** — A critical or high-severity security issue, a failed mandatory test, an unverified critical control, or another release blocker remains.
+- **CONDITIONAL GO** — No unresolved critical or high-severity security finding remains, and documented lower-priority risks are explicitly accepted.
+- **NO-GO** — A critical or high-severity security issue, a failed mandatory test, an unverified critical control, stale evidence, or another release blocker remains.
 
-Do not declare the application free of vulnerabilities.
+Do not declare the application free of vulnerabilities. Do not write a GO that the script does not print.
 
 ## Continuous enforcement
 
 For each new feature: name the new trust boundaries, exposed data, permissions, and financial or operational abuse cases; define success and failure behaviour; validate on the server; authorise on the backend; add positive and negative tests; run the relevant checks; update the security notes when the permission model changes.
 
-Where the repository already has CI, add the appropriate checks there. A failed mandatory security or regression check blocks the release recommendation. Do not install tools only to satisfy this skill. Prefer the test stack already in the repository. See [references/production-readiness.md](references/production-readiness.md).
+A failed mandatory security or regression check blocks the release recommendation. During an audit, propose CI changes and do not edit the workflow unless the mode is Fix and Verify and the user approved the change. See [references/production-readiness.md](references/production-readiness.md).
 
 ## Patterns that produce false confidence
 

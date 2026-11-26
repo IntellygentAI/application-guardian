@@ -33,3 +33,11 @@ Test long prompts, repeated expensive requests, large uploads, excessive output,
 Require input size limits, output token limits, per-account quotas, concurrency limits, timeouts, tool budgets, agent iteration limits, cost monitoring, and cancellation.
 
 One user must not be able to create uncontrolled infrastructure or provider cost.
+
+## Output handling
+
+Model output is data. HTML, Markdown, SQL, shell, and file paths produced by the model are validated before they are rendered, queried, or executed. A structured tool argument is checked against a schema. The model does not choose the allowlist.
+
+## Supply chain
+
+Untrusted models, plugins, and downloaded knowledge files are covered in [supply-chain-security.md](supply-chain-security.md). MCP tools and delegation are covered in [agent-mcp-security.md](agent-mcp-security.md).

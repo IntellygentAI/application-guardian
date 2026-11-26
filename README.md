@@ -1,8 +1,10 @@
 # Application Guardian
 
-A Cursor skill for testing, security, privacy, and production readiness.
+The production-readiness and security guardian for AI-built applications.
 
-It tells the agent to review an application the way a QA engineer, application-security engineer, database-security reviewer, and site-reliability engineer would. A successful build, a polished screen, or a happy-path test is not evidence that the application is safe to ship.
+A skill for testing, security, privacy, and production readiness. It tells an agent to review an application the way a QA engineer, an application-security engineer, a database-security reviewer, and a site-reliability engineer would. A successful build, a polished screen, or a happy-path test is not evidence that the application is safe to ship.
+
+Version 0.4.0. The original scenarios are unchanged. This version adds an evidence protocol, a release script, and evaluation fixtures. Agent benchmark scores are not measured. See [docs/benchmarks.md](docs/benchmarks.md).
 
 The skill is technology-independent. Supabase, Firebase, payment providers, and AI integrations are reviewed only when the repository actually uses them.
 
@@ -40,7 +42,7 @@ Yes means the release gate returned GO, or CONDITIONAL GO with the remaining ris
 
 ## Install
 
-Cursor loads a skill from a directory named `application-guardian` that contains `SKILL.md`.
+Manual installation is documented in [docs/installation.md](docs/installation.md). Cursor reads a directory named `application-guardian` that contains `SKILL.md`.
 
 **Every project on this machine**
 
@@ -64,7 +66,15 @@ From that repository's root:
 git clone https://github.com/IntellygentAI/application-guardian.git .cursor/skills/application-guardian
 ```
 
-Open a new Agent chat after installing. Cursor reads the skill list when the chat starts.
+Open a new Agent chat after installing.
+
+The cross-agent command below follows the [Skills CLI](https://github.com/vercel-labs/skills) convention. It has not been executed against this repository:
+
+```bash
+npx skills add IntellygentAI/application-guardian
+```
+
+Verified and unverified agents are listed in [docs/compatibility.md](docs/compatibility.md). Do not assume an agent can load the skill because it appears in that list.
 
 ## Use it
 
@@ -106,16 +116,20 @@ docs/audits/
 ├── threat-model.md
 ├── test-matrix.md
 ├── remediation-plan.md
-└── production-readiness.md
+├── production-readiness.md
+└── audit-result.json
 ```
 
 Create the empty files from the templates:
 
 ```bash
 python path/to/application-guardian/scripts/scaffold_audit.py --out docs/audits
+python path/to/application-guardian/scripts/release_gate.py docs/audits/audit-result.json --head "$(git rev-parse HEAD)"
 ```
 
-The script does not overwrite a file that already exists. A test is marked PASS only when the report cites evidence. Otherwise the status is FAIL, NOT TESTED, BLOCKED, or NOT APPLICABLE.
+The scaffold script does not overwrite a file that already exists. `release_gate.py` calculates GO, CONDITIONAL GO, or NO-GO from `audit-result.json`. A GO written only in Markdown is not the decision. Exit 0 means GO or CONDITIONAL GO. Exit 1 means NO-GO.
+
+A test is marked PASS only when the report cites evidence. Critical authorisation, tenant, payment, and database-policy checks need runtime evidence. Otherwise the status is FAIL, NOT TESTED, BLOCKED, or NOT APPLICABLE.
 
 ## Repository layout
 
@@ -123,25 +137,15 @@ The script does not overwrite a file that already exists. A test is marked PASS 
 application-guardian/
 ├── SKILL.md
 ├── references/
-│   ├── functional-testing.md
-│   ├── security-testing.md
-│   ├── data-privacy.md
-│   ├── database-security.md
-│   ├── api-security.md
-│   ├── payment-security.md
-│   ├── ai-security.md
-│   ├── accessibility.md
-│   └── production-readiness.md
 ├── templates/
-│   ├── audit-report.md
-│   ├── threat-model.md
-│   ├── test-matrix.md
-│   └── release-checklist.md
-└── scripts/
-    └── scaffold_audit.py
+├── schemas/
+├── scripts/
+├── evals/
+├── examples/
+└── docs/
 ```
 
-`SKILL.md` is the operating manual: when to run, the four modes, mandatory rules, the audit workflow, severity, and the release decision. Each reference is the checklist for one domain. The agent reads a reference only when that domain is in scope.
+`SKILL.md` is the operating manual. Each file in `references/` is one domain or one framework. The agent reads a reference only when that domain is in scope. The full map is in [docs/coverage-matrix.md](docs/coverage-matrix.md), and the script layout is in [docs/architecture.md](docs/architecture.md).
 
 | Concern | Where it lives |
 | --- | --- |
@@ -159,6 +163,10 @@ application-guardian/
 | Audit report and finding schema | `templates/audit-report.md` |
 | Threat model | `templates/threat-model.md` |
 | Release checklist | `templates/release-checklist.md` |
+| Evidence protocol and release script | `references/verification-protocol.md`, `scripts/release_gate.py` |
+| Mobile, MCP, supply chain | `references/mobile-security.md`, `references/agent-mcp-security.md`, `references/supply-chain-security.md` |
+| Framework notes | `references/framework-specific/` |
+| Evaluation fixtures | `evals/` |
 
 ## Limits
 
@@ -170,8 +178,18 @@ The skill does not:
 - print secret values or private customer data in a report
 - deploy, rotate production credentials, change live data, or run a destructive migration unless you explicitly approve that action
 - treat a hidden button, an unpredictable ID, a checkout redirect, or a public client key as a security control
+- edit the application during Quick Scan, Full Audit, or Release Gate
+- treat a measured detection rate as known. Those numbers are not measured
 
 Security checks belong at the backend, database, and infrastructure boundary. Frontend validation is not enough.
+
+A fictional completed audit is in [examples/sample-audit.md](examples/sample-audit.md). It is sample data, not a review of a real customer.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md), and [SECURITY.md](SECURITY.md). The change history is [CHANGELOG.md](CHANGELOG.md). Architecture and the coverage map are in [docs/architecture.md](docs/architecture.md) and [docs/coverage-matrix.md](docs/coverage-matrix.md).
+
+Suggested GitHub topics, once a maintainer with admin access applies them: `agent-skills`, `ai-agents`, `vibe-coding`, `application-security`, `appsec`, `devsecops`, `owasp`, `security-audit`, `automated-testing`, `production-readiness`, `cursor`, `claude-code`, `codex`, `supabase`, `llm-security`, `qa-automation`, `secure-coding`, `mcp`.
 
 ## Standards
 

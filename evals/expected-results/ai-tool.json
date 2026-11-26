@@ -1,0 +1,1 @@
+{"expect_finding": true, "severity": "high", "summary": "The tool queries with an admin client and does not check the caller's authorisation."}

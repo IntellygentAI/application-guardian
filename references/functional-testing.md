@@ -66,6 +66,8 @@ Pass criteria: no duplicate charges, accounts, orders, subscriptions, reward cre
 
 Use database constraints, atomic operations, transactions, concurrency controls, and idempotency. Disabling a button is a usability improvement, not a concurrency control.
 
+Also test a membership or permission change that races the action it was meant to allow. The write must use the authorisation that is true at commit time.
+
 ## Account lifecycle and onboarding
 
 - Register, cancel halfway, exit onboarding and return, and close the browser before verification.

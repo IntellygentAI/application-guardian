@@ -61,3 +61,32 @@ Review features that fetch remote resources: profile images from a URL, link pre
 Check for server-side request forgery, unsafe redirects, internal network access, and uncontrolled outbound requests. Require destination restrictions, network isolation where appropriate, DNS and redirect validation, timeouts, and response size limits.
 
 Prove the controls with a local mock destination. Do not target internal networks, cloud metadata addresses, or third-party systems as part of the test.
+
+## Fail-open behaviour and insecure defaults
+
+- A permission, feature, or payment check that throws an error denies the action. It does not fall through to allow.
+- Default accounts, default passwords, and permissive configuration files are findings when they ship in the product.
+- A new table, bucket, or route is private until an explicit rule makes it public.
+
+## Tokens, MFA, and passkeys
+
+- JWTs are verified for signature, issuer, audience, and expiry. The `none` algorithm and a client-supplied algorithm are rejected.
+- A token in local storage is called out when the product also has a safer cookie option. Do not treat storage choice as the only control.
+- MFA and passkey enrolment, recovery, and factor removal require a fresh authentication. Removing the last factor does not leave a weaker path that skips MFA.
+- Recovery codes are single use and are stored as hashes.
+
+## Cryptography
+
+- Passwords use a current password hash. Homegrown encryption and broken algorithms such as MD5 for security decisions are findings.
+- Random identifiers that grant access come from a cryptographic generator.
+- Private keys are not committed. Key rotation is documented. Record NOT TESTED when the key store cannot be inspected.
+
+## Path traversal, deserialisation, and prototype pollution
+
+- File paths built from user input stay inside the intended directory. `..` segments and absolute paths are rejected.
+- Untrusted payloads are not passed to a deserialiser that can construct arbitrary objects. Prefer a schema.
+- JavaScript object merges used for queries or configuration reject `__proto__`, `constructor`, and `prototype`.
+
+## Concurrency of permissions
+
+A check that passes and a later write that uses a different role is a time-of-check/time-of-use defect. Test a permission change, membership revocation, or tenant switch that lands between the check and the write. The write uses the current authorisation.

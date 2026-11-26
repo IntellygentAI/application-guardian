@@ -1,6 +1,8 @@
 # Production readiness
 
-Use the tools the repository already has. Do not install a scanner, browser driver, or load generator only to satisfy this skill. Bounded load tests run only against authorised environments.
+Quick Scan, Full Audit, and Release Gate are read-only. Do not add dependencies, scanners, or CI configuration in those modes. If the repository has no test runner, name the smallest setup that would cover the failed or untested critical paths and wait for approval before adding it. Fix and Verify may add that setup after approval. Prefer the tools the repository already has. Bounded load tests run only against authorised environments.
+
+Supply chain, CI permissions, email, SMS, background jobs, feature flags, and DNS are covered in [supply-chain-security.md](supply-chain-security.md). Mobile clients and service workers are covered in [mobile-security.md](mobile-security.md).
 
 ## Dependencies and supply chain
 

@@ -1,0 +1,15 @@
+{
+  "id": "AG-001",
+  "title": "Short description of the defect",
+  "severity": "high",
+  "status": "open",
+  "confidence": "confirmed",
+  "evidence_type": "runtime",
+  "location": "path/to/file.ts:1",
+  "commit": "git-commit-tested",
+  "command": "the command that was run",
+  "exit_code": 1,
+  "expected": "what a safe result looks like",
+  "observed": "what happened, without secrets or private customer data",
+  "executed_at": "2026-01-01T00:00:00Z"
+}

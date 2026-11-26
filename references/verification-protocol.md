@@ -1,0 +1,68 @@
+# Verification protocol
+
+Use this protocol for every audit. Quick Scan, Full Audit, and Release Gate do not modify the application. Fix and Verify is the only mode that may change code, and only after the finding is recorded.
+
+## Evidence classes
+
+| Class | Meaning |
+| --- | --- |
+| Static | The control was read in source, configuration, or policy text |
+| Runtime | The control was executed in a local or authorised environment |
+| None | The check was not executed |
+
+Reading an authorisation function is static evidence. It does not prove the function runs on the request that matters. Critical authorisation, tenant isolation, payment integrity, and database-policy checks require runtime evidence before they can PASS.
+
+## Statuses
+
+PASS, FAIL, NOT TESTED, BLOCKED, and NOT APPLICABLE.
+
+PASS requires the command, exit code, expected result, and observed result. A file and line reference can support a static finding. It cannot by itself PASS a critical control.
+
+## What to record for each executed test
+
+- Test ID
+- Git commit that was tested
+- Environment: `local` or `authorised-staging`
+- Command
+- Exit code
+- Expected result
+- Observed result
+- Timestamp
+- Evidence location
+
+Record the same commit in `docs/audits/audit-result.json`. Run `scripts/release_gate.py` with `--head` set to the current commit. If the commits differ, the evidence is stale and the decision is NO-GO.
+
+## Finding labels
+
+| Status | Use when |
+| --- | --- |
+| open | The defect was confirmed and is not fixed |
+| suspected | The risk is plausible and has not been observed |
+| fixed | A regression test failed before the change and passed after it |
+| false_positive | The report was wrong. Say why |
+| accepted | A medium or low risk has an owner and an explicit acceptance |
+
+Do not accept a critical or high finding. A suspected critical or high finding stays NO-GO until it is confirmed and fixed, or reclassified with evidence.
+
+## Release decision
+
+Do not type GO, CONDITIONAL GO, or NO-GO from memory. Calculate it:
+
+```bash
+python scripts/release_gate.py docs/audits/audit-result.json --head "$(git rev-parse HEAD)"
+```
+
+The script is the decision. It returns exit 0 for GO and CONDITIONAL GO, and exit 1 for NO-GO.
+
+| Condition | Decision |
+| --- | --- |
+| Unresolved critical or high finding | NO-GO |
+| Critical or high finding marked accepted | NO-GO |
+| Failed, blocked, or unexecuted mandatory check | NO-GO |
+| Critical control with only static evidence | NO-GO |
+| Audit commit differs from HEAD | NO-GO |
+| Open medium or low finding without acceptance | NO-GO |
+| Accepted medium or low risk, and no blocker above | CONDITIONAL GO |
+| Applicable mandatory checks passed and no open findings remain | GO |
+
+A material change to a verified control invalidates that evidence. Re-run the test on the new commit.

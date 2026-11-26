@@ -1,0 +1,1 @@
+{"expect_finding": true, "severity": "high", "summary": "The invoice is loaded by id and returned without an ownership check."}

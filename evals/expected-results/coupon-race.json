@@ -1,0 +1,1 @@
+{"expect_finding": true, "severity": "high", "summary": "Read-then-update redemption can apply one coupon twice under concurrency."}

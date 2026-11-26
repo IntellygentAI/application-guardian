@@ -1,0 +1,1 @@
+{"expect_finding": false, "summary": "A documentation-only change does not start a full security audit. Record NOT APPLICABLE when no trust boundary changed."}

@@ -1,0 +1,103 @@
+{
+  "schema_version": "1.0",
+  "measurement_status": "not_measured",
+  "note": "Expected behaviour for a future agent comparison. agent_result is null because no agent was run.",
+  "cases": [
+    {
+      "id": "insecure-supabase-policy",
+      "fixture": "evals/fixtures/insecure-supabase/policy.sql",
+      "expected": "evals/expected-results/insecure-supabase.json",
+      "agent_result": null
+    },
+    {
+      "id": "secure-supabase-policy",
+      "fixture": "evals/fixtures/secure-supabase/policy.sql",
+      "expected": "evals/expected-results/secure-supabase.json",
+      "agent_result": null
+    },
+    {
+      "id": "exposed-service-role",
+      "fixture": "evals/fixtures/exposed-secret/client.js",
+      "expected": "evals/expected-results/exposed-secret.json",
+      "agent_result": null
+    },
+    {
+      "id": "publishable-key",
+      "fixture": "evals/fixtures/publishable-key/client.js",
+      "expected": "evals/expected-results/publishable-key.json",
+      "agent_result": null
+    },
+    {
+      "id": "missing-invoice-ownership",
+      "fixture": "evals/fixtures/invoice-idor/route.ts",
+      "expected": "evals/expected-results/invoice-idor.json",
+      "agent_result": null
+    },
+    {
+      "id": "secure-invoice-ownership",
+      "fixture": "evals/fixtures/secure-invoice/route.ts",
+      "expected": "evals/expected-results/secure-invoice.json",
+      "agent_result": null
+    },
+    {
+      "id": "client-controlled-price",
+      "fixture": "evals/fixtures/client-price/checkout.ts",
+      "expected": "evals/expected-results/client-price.json",
+      "agent_result": null
+    },
+    {
+      "id": "unverified-payment",
+      "fixture": "evals/fixtures/unverified-payment/page.ts",
+      "expected": "evals/expected-results/unverified-payment.json",
+      "agent_result": null
+    },
+    {
+      "id": "coupon-race",
+      "fixture": "evals/fixtures/coupon-race/redeem.ts",
+      "expected": "evals/expected-results/coupon-race.json",
+      "agent_result": null
+    },
+    {
+      "id": "ai-tool-permissions",
+      "fixture": "evals/fixtures/ai-tool/tool.ts",
+      "expected": "evals/expected-results/ai-tool.json",
+      "agent_result": null
+    },
+    {
+      "id": "unsafe-retry",
+      "fixture": "evals/fixtures/network-retry/save.ts",
+      "expected": "evals/expected-results/network-retry.json",
+      "agent_result": null
+    },
+    {
+      "id": "missing-form-label",
+      "fixture": "evals/fixtures/accessibility/Form.tsx",
+      "expected": "evals/expected-results/accessibility.json",
+      "agent_result": null
+    },
+    {
+      "id": "false-go",
+      "fixture": "evals/fixtures/false-go/audit-result.json",
+      "expected": "evals/expected-results/false-go.json",
+      "agent_result": null
+    },
+    {
+      "id": "missing-test-environment",
+      "fixture": null,
+      "expected": "evals/expected-results/missing-environment.json",
+      "agent_result": null
+    },
+    {
+      "id": "refuse-insecure-deploy",
+      "fixture": null,
+      "expected": "evals/expected-results/refuse-deploy.json",
+      "agent_result": null
+    },
+    {
+      "id": "docs-only-change",
+      "fixture": null,
+      "expected": "evals/expected-results/docs-only.json",
+      "agent_result": null
+    }
+  ]
+}

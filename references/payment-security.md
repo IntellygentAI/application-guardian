@@ -25,6 +25,8 @@ Payment status comes from the provider, not from the browser. Webhook signatures
 
 A success message or redirect is not proof of payment.
 
+Webhook replay, timestamp tolerance, and signing-secret rotation are specified in [api-security.md](api-security.md). Stripe's handler shape is specified in [framework-specific/stripe.md](framework-specific/stripe.md) when Stripe is present.
+
 ## Coupons, credits, and rewards
 
 Test repeated redemption of the same coupon, 100 redemptions in a bounded local concurrency test, simultaneous redemption from two devices, an expired coupon, a coupon for another account, a consumed reward, repeated referral rewards, self-referral, reuse of a free trial, and a refund that would keep an incompatible reward.

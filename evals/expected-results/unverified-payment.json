@@ -1,0 +1,1 @@
+{"expect_finding": true, "severity": "high", "summary": "Premium access is granted from the success page without a verified provider event."}

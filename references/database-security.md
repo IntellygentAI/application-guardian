@@ -53,3 +53,11 @@ Test, in a disposable local or authorised database:
 - Restoring a backup in an isolated environment
 
 A backup is not operationally verified until a restore has been performed. If restore was not executed, record NOT TESTED, not PASS.
+
+## Tenants
+
+Switching organisation, accepting an invitation, and revoking a member take effect on the next request. A cached membership does not keep access. Shared caches and search indexes do not return another tenant's rows. See also the cache checks in [api-security.md](api-security.md).
+
+## Recovery objectives
+
+Record the documented recovery time and recovery point when they exist. A restore test in an isolated environment is the evidence. A diagram of a backup, without a restore, stays NOT TESTED.

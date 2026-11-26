@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "finding.schema.json",
+  "title": "Application Guardian finding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "severity", "status", "evidence_type"],
+  "properties": {
+    "id": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1},
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "high", "medium", "low", "informational"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["open", "suspected", "fixed", "false_positive", "accepted"]
+    },
+    "confidence": {"type": "string", "enum": ["confirmed", "suspected"]},
+    "evidence_type": {"type": "string", "enum": ["static", "runtime", "none"]},
+    "location": {"type": "string"},
+    "commit": {"type": "string"},
+    "command": {"type": "string"},
+    "exit_code": {"type": ["integer", "null"]},
+    "expected": {"type": "string"},
+    "observed": {"type": "string"},
+    "executed_at": {"type": "string"}
+  }
+}

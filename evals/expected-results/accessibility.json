@@ -1,0 +1,1 @@
+{"expect_finding": true, "severity": "medium", "summary": "The email input has a placeholder and no accessible name."}

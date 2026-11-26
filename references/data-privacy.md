@@ -52,7 +52,7 @@ If a real secret is exposed:
 1. Report the location and the secret type. Do not reproduce the value.
 2. Recommend immediate revocation and rotation.
 3. Identify affected environments and dependencies.
-4. Remove the insecure reference.
+4. In Fix and Verify mode, remove the insecure reference. In Quick Scan, Full Audit, and Release Gate, record the required change and do not edit the application.
 5. Recommend reviewing repository history and access logs.
 6. Verify that the replacement credential is not exposed.
 
@@ -71,3 +71,11 @@ Verify that only necessary personal data is collected, sensitive data is protect
 Account deletion revokes access. Deleted information follows the documented retention policy. Export is limited to authorised data. Backups follow retention and access policy. Shared devices do not show the previous user's cached private data. Third parties receive only the data they need.
 
 Identify applicable privacy obligations, such as UK GDPR or EU GDPR, when the product context makes them relevant. Separate technical findings from matters that need legal or regulatory review. Do not give a legal conclusion.
+
+## Retention
+
+Expired personal data, orphaned uploads, and backups are deleted or retained only for the documented period. Account deletion removes or irreversibly anonymises the private data the policy names, including files and search indexes. Say when a backup cannot be edited and record the remaining retention as a risk, not as a completed deletion.
+
+## Observability
+
+Analytics, session replay, and error trackers do not receive passwords, tokens, message bodies, or payment details. A session recording of an authenticated page is private data. Logs that include those fields are findings.
