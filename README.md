@@ -18,7 +18,7 @@
 
 A skill for testing, security, privacy, and production readiness. It tells an agent to review an application the way a QA engineer, an application-security engineer, a database-security reviewer, and a site-reliability engineer would. A successful build, a polished screen, or a happy-path test is not evidence that the application is safe to ship.
 
-Version 0.4.0. The original scenarios are unchanged. This version adds an evidence protocol, a release script, and evaluation fixtures. Agent benchmark scores are not measured. See [docs/benchmarks.md](docs/benchmarks.md).
+Version 0.4.0. The original scenarios are unchanged. This version adds an evidence protocol, a release script, and evaluation fixtures. The first with-and-without benchmark ran on 2026-11-26: on the current 18 cases both arms scored 96 of 96, so the cases are too easy to show a detection gain, and the skill added about 25% tokens. See [docs/benchmarks.md](docs/benchmarks.md).
 
 The skill is technology-independent. Supabase, Firebase, payment providers, and AI integrations are reviewed only when the repository actually uses them.
 
@@ -109,13 +109,13 @@ git clone https://github.com/IntellygentAI/application-guardian.git .cursor/skil
 
 Open a new Agent chat after installing.
 
-The cross-agent command below follows the [Skills CLI](https://github.com/vercel-labs/skills) convention. It has not been executed against this repository:
+Or install with the [Skills CLI](https://github.com/vercel-labs/skills). This was run against this repository on 2026-11-26. It installs to `.agents/skills/` for Cursor, Codex, GitHub Copilot, and Gemini CLI, and links `.claude/skills/` for Claude Code:
 
 ```bash
 npx skills add IntellygentAI/application-guardian
 ```
 
-Verified and unverified agents are listed in [docs/compatibility.md](docs/compatibility.md). Do not assume an agent can load the skill because it appears in that list.
+Install was verified with the CLI. Whether each agent selects the skill on its own was not measured. See [docs/compatibility.md](docs/compatibility.md).
 
 ## Use it
 
@@ -168,7 +168,7 @@ python path/to/application-guardian/scripts/scaffold_audit.py --out docs/audits
 python path/to/application-guardian/scripts/release_gate.py docs/audits/audit-result.json --head "$(git rev-parse HEAD)"
 ```
 
-<img src="docs/assets/release-gate.svg" alt="Animated terminal: release_gate.py on the sample audit prints NO-GO with three reasons and exits 1" width="100%">
+<img src="docs/assets/release-gate.svg" alt="Animated terminal: release_gate.py on the sample audit prints NO-GO with two reasons and exits 1" width="100%">
 
 The scaffold script does not overwrite a file that already exists. `release_gate.py` calculates GO, CONDITIONAL GO, or NO-GO from `audit-result.json`. A GO written only in Markdown is not the decision. Exit 0 means GO or CONDITIONAL GO. Exit 1 means NO-GO.
 
@@ -222,7 +222,7 @@ The skill does not:
 - deploy, rotate production credentials, change live data, or run a destructive migration unless you explicitly approve that action
 - treat a hidden button, an unpredictable ID, a checkout redirect, or a public client key as a security control
 - edit the application during Quick Scan, Full Audit, or Release Gate
-- treat a measured detection rate as known. Those numbers are not measured
+- claim a detection gain it has not measured. The 2026-11-26 benchmark showed no difference on the current cases
 
 Security checks belong at the backend, database, and infrastructure boundary. Frontend validation is not enough.
 
