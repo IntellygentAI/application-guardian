@@ -141,6 +141,37 @@ class ReleaseGateTests(unittest.TestCase):
     def test_invalid_document_exits_2(self):
         self.assertEqual(release_gate.evaluate({"schema_version": "1.0"}, strict=False), 2)
 
+    def test_fixed_critical_needs_runtime_evidence(self):
+        finding = {
+            "id": "AG-1",
+            "title": "Cross-user invoice read",
+            "severity": "critical",
+            "status": "fixed",
+            "evidence_type": "static",
+        }
+        result = guardianlib.decide(document(findings=[finding]))
+        self.assertEqual(result["release_decision"], "NO-GO")
+        finding["evidence_type"] = "runtime"
+        self.assertEqual(guardianlib.decide(document(findings=[finding]))["release_decision"], "GO")
+
+    def test_check_from_older_commit_is_stale(self):
+        check = {"id": "auth", "status": "PASS", "critical": True, "evidence_type": "runtime", "commit": "old000"}
+        result = guardianlib.decide(document(mandatory_checks=[check], head_commit="abc123"))
+        self.assertEqual(result["release_decision"], "NO-GO")
+
+    def test_cli_head_overrides_head_written_in_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "audit-result.json"
+            path.write_text(json.dumps(document(head_commit="abc123")), encoding="utf-8")
+            completed = subprocess.run(
+                [sys.executable, str(ROOT / "scripts" / "release_gate.py"), str(path), "--head", "def456"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("stale", completed.stdout)
+
     def test_sample_audit_is_no_go(self):
         sample = json.loads((ROOT / "examples" / "sample-audit-result.json").read_text(encoding="utf-8"))
         self.assertEqual(validate_report.validate_audit(sample), [])

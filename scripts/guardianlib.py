@@ -34,10 +34,21 @@ def decide(document: dict[str, Any]) -> dict[str, Any]:
             f"Evidence was recorded at {audited} and HEAD is {head}. The evidence is stale."
         )
 
+    # The commit the release is for. Evidence from any other commit is stale.
+    reference = head or audited
+
     for finding in findings:
         severity = str(finding.get("severity") or "").lower()
         status = str(finding.get("status") or "").lower()
         finding_id = str(finding.get("id") or "unknown")
+        if status == "fixed" and severity in BLOCKING_SEVERITIES:
+            evidence = str(finding.get("evidence_type") or "none")
+            if evidence in RUNTIME_REQUIRED:
+                reasons.append(
+                    f"{finding_id} is a {severity} finding marked fixed with {evidence} evidence. "
+                    "A fix is verified only by an executed test."
+                )
+            continue
         if status in {"fixed", "false_positive"}:
             continue
         if severity in BLOCKING_SEVERITIES and status == "accepted":
@@ -68,6 +79,12 @@ def decide(document: dict[str, Any]) -> dict[str, Any]:
         check_id = str(check.get("id") or "unknown")
         critical = bool(check.get("critical"))
         evidence = str(check.get("evidence_type") or "none")
+        check_commit = str(check.get("commit") or "")
+        if status == "PASS" and check_commit and reference and check_commit != reference:
+            reasons.append(
+                f"{check_id} passed at {check_commit}, not at {reference}. The evidence is stale."
+            )
+            continue
         if status == "PASS":
             passed += 1
             if critical and evidence in RUNTIME_REQUIRED:
