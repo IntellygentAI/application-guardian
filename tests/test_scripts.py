@@ -29,12 +29,23 @@ def document(**overrides):
                 "status": "PASS",
                 "critical": True,
                 "evidence_type": "runtime",
+                "commit": "abc123",
             }
         ],
         "accepted_risks": [],
     }
     base.update(overrides)
     return base
+
+
+def run_gate(path, *extra, cwd=None):
+    return subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "release_gate.py"), str(path), *extra],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
 
 
 class ReleaseGateTests(unittest.TestCase):
@@ -154,6 +165,46 @@ class ReleaseGateTests(unittest.TestCase):
         finding["evidence_type"] = "runtime"
         self.assertEqual(guardianlib.decide(document(findings=[finding]))["release_decision"], "GO")
 
+    def test_pass_without_commit_is_not_fresh(self):
+        check = {"id": "auth", "status": "PASS", "critical": True, "evidence_type": "runtime"}
+        result = guardianlib.decide(document(mandatory_checks=[check], head_commit="abc123"))
+        self.assertEqual(result["release_decision"], "NO-GO")
+        self.assertIn("no recorded commit", " ".join(result["reasons"]))
+
+    def test_cli_without_head_outside_git_exits_2(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "audit-result.json"
+            path.write_text(json.dumps(document()), encoding="utf-8")
+            completed = run_gate(path, cwd=tmp)
+        self.assertEqual(completed.returncode, 2)
+        self.assertIn("--head", completed.stderr)
+
+    def test_cli_without_head_reads_git_head(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            git = ["git", "-C", tmp, "-c", "user.name=t", "-c", "user.email=t@example.invalid"]
+            subprocess.run(["git", "init", "-q", tmp], check=True)
+            path = Path(tmp) / "audit-result.json"
+            path.write_text(json.dumps(document(head_commit="abc123")), encoding="utf-8")
+            subprocess.run([*git, "add", "-A"], check=True)
+            subprocess.run([*git, "commit", "-q", "-m", "audit"], check=True)
+            head = subprocess.run(
+                ["git", "-C", tmp, "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+            ).stdout.strip()
+            stale = run_gate(path)
+            path.write_text(
+                json.dumps(
+                    document(
+                        commit=head,
+                        mandatory_checks=[dict(document()["mandatory_checks"][0], commit=head)],
+                    )
+                ),
+                encoding="utf-8",
+            )
+            fresh = run_gate(path)
+        self.assertEqual(stale.returncode, 1)
+        self.assertIn("stale", stale.stdout)
+        self.assertEqual(fresh.returncode, 0, fresh.stdout + fresh.stderr)
+
     def test_check_from_older_commit_is_stale(self):
         check = {"id": "auth", "status": "PASS", "critical": True, "evidence_type": "runtime", "commit": "old000"}
         result = guardianlib.decide(document(mandatory_checks=[check], head_commit="abc123"))
@@ -208,6 +259,24 @@ class StackTests(unittest.TestCase):
             self.assertIn("nextjs", found)
             self.assertIn("react", found)
             self.assertIn("supabase", found)
+
+    def test_pyproject_reads_dependencies_not_text(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "pyproject.toml").write_text(
+                "# Migrated away from Django and Stripe.\n"
+                "[project]\n"
+                'name = "svc"\n'
+                'description = "Replaces the old Django admin"\n'
+                'dependencies = ["fastapi>=0.110", "sqlalchemy[asyncio]~=2.0"]\n'
+                "[tool.poetry.group.billing.dependencies]\n"
+                'stripe = "^9"\n',
+                encoding="utf-8",
+            )
+            found = detect_stack.detect(root)
+            self.assertIn("fastapi", found)
+            self.assertIn("stripe", found)
+            self.assertNotIn("django", found)
 
 
 class SkillValidationTests(unittest.TestCase):

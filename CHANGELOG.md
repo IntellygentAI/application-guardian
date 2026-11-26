@@ -8,6 +8,11 @@ The version stays 0.4.0 until measured benchmarks exist.
 - `release_gate.py`: a mandatory check that passed at a different commit is stale and returns NO-GO.
 - `release_gate.py`: a critical or high finding marked `fixed` needs runtime evidence. A fix supported only by static reading returns NO-GO.
 - Added regression tests for the three cases above. Each test fails on the previous gate code.
+- `release_gate.py`: without `--head`, the gate reads HEAD from the Git repository that holds the audit file, and exits 2 when it cannot. Before, it compared the file only with itself and could print GO.
+- `release_gate.py`: a PASS with no recorded commit is not fresh evidence and returns NO-GO.
+- `detect_stack.py`: `pyproject.toml` is parsed as TOML and only declared dependencies count (PEP 621, dependency groups, Poetry). A framework named in a comment or description no longer matches.
+- `SKILL.md`: check that `docs/audits/` is not ignored by Git, and treat a gate that could not run as NO-GO.
+- Reported by an external review of v0.4.0. Four regression tests added; each fails on the previous code.
 - README: animated header and release-gate terminal (self-hosted SVG, no external services, respects reduced motion), CI badges, and quick links.
 - Added the v0.5 scenario-playbook upgrade prompt at `docs/roadmap/v0.5-upgrade-prompt.md`. It is a plan, not implemented work.
 
