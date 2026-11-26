@@ -12,7 +12,12 @@ The version stays 0.4.0 until measured benchmarks exist.
 - `release_gate.py`: a PASS with no recorded commit is not fresh evidence and returns NO-GO.
 - `detect_stack.py`: `pyproject.toml` is parsed as TOML and only declared dependencies count (PEP 621, dependency groups, Poetry). A framework named in a comment or description no longer matches.
 - `SKILL.md`: check that `docs/audits/` is not ignored by Git, and treat a gate that could not run as NO-GO.
-- Reported by an external review of v0.4.0. Four regression tests added; each fails on the previous code.
+- Added four regression tests for the changes above. Each fails on the previous code.
+- `references/security-testing.md`: named the SQL shapes that AI-generated code produces (string-built SQL, ORM escape hatches with interpolation, identifiers taken from the request, dynamic SQL in database functions, second-order input, NoSQL operators), their safe forms, and runtime checks that need no exploit payload.
+- Added a matched pair of SQL evaluation fixtures: a string-built query with a request-controlled sort, and a bound query with an allowlisted sort that must not be reported.
+- README: research behind the evidence-first design, and how the skill compares with coding-behaviour skills, autonomous pentest tools, and static analysis skill sets.
+- `docs/benchmarks.md`: measure activation before detection.
+- Roadmap prompt: neutral, maintainer-facing wording.
 - README: animated header and release-gate terminal (self-hosted SVG, no external services, respects reduced motion), CI badges, and quick links.
 - Added the v0.5 scenario-playbook upgrade prompt at `docs/roadmap/v0.5-upgrade-prompt.md`. It is a plan, not implemented work.
 

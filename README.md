@@ -33,7 +33,34 @@ These are the failures to look for when an AI coding agent wrote or changed the 
 - **Exposed private documents.** Invoices, identity documents, and personal uploads sit in public storage.
 - **Overprivileged AI agents.** The assistant can reach the whole database or privileged tools. Access has to stay limited to the current user's authorised resources.
 - **Race conditions.** Simultaneous requests create duplicate rewards, orders, or charges.
+- **String-built queries.** The query returns the right rows, but a search term or sort column is joined into the SQL text instead of bound.
 - **False confidence from testing.** The suite passes because it only covers the successful path. It never tries another user, invalid input, or a failed dependency.
+
+### What the research shows
+
+- In a Stanford user study (Perry et al., ACM CCS 2023), [36% of participants with an AI assistant wrote SQL-injectable code on the SQL task, compared with 7% without one](https://arxiv.org/abs/2211.03622). Participants with the assistant were also more likely to believe their code was secure.
+- On the SusVibes benchmark of real repository tasks (Zhao et al., ICML 2026), [the best agent produced functionally correct code 57% of the time, but only 11.8% of its solutions were secure](https://icml.cc/virtual/2026/poster/61427). The authors report that security reminders in the prompt did not meaningfully improve that.
+
+Reminders alone do not close the gap. Application Guardian therefore names the concrete code shapes to look for, and computes the release decision from checks that were executed on the current commit.
+
+## How it compares
+
+Several popular skills work alongside this one. They do different jobs.
+
+| | Coding-behaviour skills | Autonomous pentest tools | Static analysis skill sets | Application Guardian |
+| --- | --- | --- | --- | --- |
+| Examples | [Karpathy-inspired guidelines](https://github.com/forrestchang/andrej-karpathy-skills), [Ponytail](https://github.com/DietrichGebert/ponytail) | [Strix](https://github.com/usestrix/strix) | [Trail of Bits skills](https://github.com/trailofbits/skills) | |
+| Job | Shape how the agent writes code: state assumptions, make the smallest change | Attack a running app in a sandbox and prove findings with a proof of concept | Run CodeQL, Semgrep, and variant analysis on source | Decide whether an application is ready to release |
+| Output | Smaller, clearer diffs | Validated vulnerabilities | Static findings | Findings, a test matrix, and a computed GO, CONDITIONAL GO, or NO-GO |
+| Exploit content | None | Yes, in a sandbox | None | None. Synthetic data, local or authorised staging only |
+
+What Application Guardian adds:
+
+- **A release decision that a script calculates.** `release_gate.py` reads structured evidence. Stale evidence, static-only evidence for a critical control, or a check with no recorded commit cannot produce GO.
+- **Real-world behaviour and business logic in the same audit.** Lost connections, double taps, locale and time zone changes, denied permissions, price and coupon abuse, payment verification, and private-data exposure sit next to code-level vulnerability classes.
+- **Read-only audits.** Quick Scan, Full Audit, and Release Gate do not change the application. Only Fix and Verify edits code, after you ask.
+
+It works well with the others: a behaviour skill while writing, a static analyser for depth, and Application Guardian before you ship.
 
 ## How it fits into development
 
