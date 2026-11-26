@@ -1,5 +1,64 @@
 # Benchmarks
 
+## 2026-11-26: harder cases
+
+**Result: both arms passed all 72 graded checks again.** The model found every subtle defect and made no false positives, with or without the skill. The skill changed how the agent worked, not what it found, and in two cases it made the agent look less closely.
+
+The 17 cases were built to fix the limits of the first run below:
+
+- **7 defects that are not in the obvious file.** An admin route outside the middleware's matcher. A price looked up and then overwritten by the request body. A `SECURITY DEFINER` database function that skips row-level security. A Stripe webhook that grants access before a Bacs or bank-transfer payment clears. A wallet transfer that accepts a negative amount. An organisation ID taken from a request header. A URL allowlist that checks a string prefix.
+- **4 pieces of secure code that look wrong.** An update policy with no `WITH CHECK`, which PostgreSQL covers with `USING`. A Prisma extension that scopes every read. Tagged-template SQL. A correct webhook.
+- **6 audit cases, each a real Git repository.** The evidence for `ownership` is from an older commit. `payment-verification` is missing. A critical check passed on code reading alone. A high finding is marked accepted. Three critical checks "passed" with the commands `true` and `echo`. One audit is genuinely CONDITIONAL GO.
+
+| | Without the skill | With the skill |
+| --- | --- | --- |
+| Runs | 3 | 3 |
+| Graded checks passed | 72 / 72 | 72 / 72 |
+| Defects detected | 21 / 21 | 21 / 21 |
+| Severity within one level | 21 / 21 | 21 / 21 |
+| False positives on secure code | 0 / 12 | 0 / 12 |
+| Correct release decision | 18 / 18 | 18 / 18 |
+| Mean tokens per run | 71,107 | 83,980 (+18%) |
+| Mean tool calls per run | 8.0 | 9.7 |
+| Mean time per run | 68.9 s | 76.9 s (+12%) |
+
+### Observations outside the score
+
+Counted by text match over the summaries after grading. They are reported, not scored.
+
+| Behaviour | Without the skill | With the skill |
+| --- | --- | --- |
+| Names `release_gate.py` in an audit-case summary | 0 / 18 | 17 / 18 |
+| Commands that test nothing: says the script prints GO and overrides it | 0 / 3 | 3 / 3 |
+| `SECURITY DEFINER` case: notes that signed-out users can call the function too | 0 / 3 | 3 / 3 |
+| Cites a CWE (out of 51 summaries) | 0 | 12 |
+| Rates one of the 7 high defects as critical (out of 21) | 8 | 3 |
+| Static-evidence case: notices the recorded claim does not match the code | 3 / 3 | 0 / 3 |
+| Missing-check case: points to the test file that exists for the missing check | 3 / 3 | 0 / 3 |
+
+Two results matter most:
+
+- **The skill did not blindly trust its own gate.** On the forged audit, `release_gate.py` prints GO because every field is filled in. All three skill runs ran it, saw GO, and recorded NO-GO because the commands test nothing. Without the skill, the agent also reached NO-GO, by reading the file.
+- **The skill made the agent stop at the gate's reason.** In the static-evidence case, the audit claims every query is scoped to the organisation, while the code scopes by `owner_id`. Every run without the skill noticed this, and no run with the skill did. Those runs reported the gate's reason, static evidence on a critical check, and went no further. The decision was right either way, but a reviewer would want the mismatch. The skill should say that the gate's NO-GO reasons are where to start, not the whole review.
+
+### Method
+
+The same as the first run, with these differences:
+
+- **Cases:** built by [`evals/benchmark/hard_pack.py`](../evals/benchmark/hard_pack.py) with seed 20261127. Folders have neutral names in a shuffled order, comments that explain why a decoy is safe were removed, and audit repositories use fixed commit dates, so every build is identical. The answer key is written outside the pack.
+- **Prompt:** the same as the first run, adjusted for 17 cases and Git repositories, and without the `check_status` and `full_audit` keys. See [`evals/benchmark/prompts.md`](../evals/benchmark/prompts.md).
+- **Skill under test:** commit `4a2dee4`. The skill arm received `SKILL.md`, `references/`, `scripts/`, `schemas/`, `templates/`, and `docs/ci.md`.
+- **Isolation:** the key and every copy of this repository were made unreadable during the runs.
+- **Grading:** fixed rules in [`evals/benchmark/grade_hard.py`](../evals/benchmark/grade_hard.py). Raw answers, the key, cost per run, and scores are in `evals/benchmark/results/2026-11-26-hard/`.
+
+### What this means
+
+For this model, a strong frontier model, the cases still do not separate the arms on correctness. The skill's measured value is in process: it runs the gate, it records evidence, and it names standards. It costs about a fifth more tokens. The next useful runs are:
+
+- A smaller, faster model, where detection may differ.
+- Whole repositories with several defects and many files, where a checklist may stop the agent from skipping areas.
+- An activation arm: the skill installed but not named in the prompt.
+
 ## 2026-11-26: with and without the skill
 
 **Result: on the 18 current eval cases, the skill made no measurable difference to correctness. Both arms passed all 96 graded checks.** The cases are too easy for the model tested. They show the skill does no harm on these cases, and that it adds cost. They cannot show that it improves detection.
