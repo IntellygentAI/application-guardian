@@ -71,6 +71,12 @@ Asking the agent to be careful is not enough. Application Guardian tells it exac
 **Real-world use**
 - Lost connections, double taps, very long input, other languages, time zones, denied permissions, and screen readers
 
+**Notices and third parties**
+- A privacy notice that omits a service the code sends personal data to
+- A delete button that hides the account and leaves the data
+- Analytics or advertising tags that run before the user agrees
+- A subscription that is easy to start and hard to stop
+
 The full checklists are in `references/`. Each file covers one area, and the agent reads it only when that area applies.
 
 ## The release gate

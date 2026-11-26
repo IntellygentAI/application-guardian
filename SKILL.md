@@ -39,6 +39,7 @@ Apply it when the work:
 - Creates or modifies a database table, grant, policy, rule, or migration
 - Adds file uploads or object storage
 - Implements payments, subscriptions, coupons, credits, or entitlements
+- Collects personal data, shows a privacy notice, uses analytics or advertising, or ships third-party code, fonts, or media
 - Integrates an AI model, tools, retrieval, or memory
 - Installs or upgrades dependencies
 - Prepares a production deployment
@@ -57,7 +58,7 @@ Apply it when the work:
 Selection:
 
 1. If the user names a mode or domain, use that.
-2. Domain commands: database security audit reads [references/database-security.md](references/database-security.md); payment audit reads [references/payment-security.md](references/payment-security.md); AI security audit reads [references/ai-security.md](references/ai-security.md).
+2. Domain commands: database security audit reads [references/database-security.md](references/database-security.md); payment audit reads [references/payment-security.md](references/payment-security.md); AI security audit reads [references/ai-security.md](references/ai-security.md); legal exposure audit reads [references/legal-exposure.md](references/legal-exposure.md).
 3. Otherwise use Full Audit when there is no prior audit or the application is new.
 4. Otherwise use Quick Scan for incremental changes, and read only the references the diff actually touches. A documentation-only or comment-only diff does not start a Full Audit. If that diff touches no trust boundary, record the security domains as NOT APPLICABLE and stop.
 5. Fix and Verify starts from confirmed findings. Do not rewrite the application before those findings are recorded.
@@ -89,6 +90,7 @@ Read a reference before assessing that domain. Skip a conditional section when t
 | Input, network, devices, concurrency, accounts, permissions, locale | [references/functional-testing.md](references/functional-testing.md) |
 | Authentication, access control, XSS, injection, browser, SSRF | [references/security-testing.md](references/security-testing.md) |
 | Private data, enumeration, files, secrets, privacy lifecycle | [references/data-privacy.md](references/data-privacy.md) |
+| Notices, erasure, children, cancellation, tracking consent, names, licenses | [references/legal-exposure.md](references/legal-exposure.md) |
 | Supabase, Firebase, integrity, backup | [references/database-security.md](references/database-security.md) |
 | Endpoint inventory and API abuse | [references/api-security.md](references/api-security.md) |
 | Price, payment, coupons, entitlements | [references/payment-security.md](references/payment-security.md) |
@@ -228,6 +230,8 @@ Watch for these when the application was generated or changed with an AI coding 
 - An AI tool or retrieval path can reach data the current user cannot access.
 - A single request is correct and concurrent requests duplicate charges, orders, or rewards.
 - The suite passes because it never exercises another user, invalid input, or a failed dependency.
+- Analytics or an advertising tag runs before the user agrees, or the privacy notice omits a service the code sends personal data to.
+- Account deletion hides the profile and leaves the data. A subscription starts in one step and cannot be stopped the same way.
 
 ## Standards
 
@@ -248,6 +252,9 @@ Use the version that matches the repository:
 - [Playwright emulation](https://playwright.dev/docs/emulation)
 - [Firebase Security Rules](https://firebase.google.com/docs/rules)
 - [OWASP Webhook Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Webhook_Security_Cheat_Sheet.html)
+- [GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj)
+- [COPPA Rule](https://www.ecfr.gov/current/title-16/chapter-I/subchapter-C/part-312)
+- [ROSCA, 15 USC 8403](https://uscode.house.gov/view.xhtml?req=granuleid:USC-prelim-title15-section8403&num=0&edition=prelim)
 
 ## Final instruction
 
