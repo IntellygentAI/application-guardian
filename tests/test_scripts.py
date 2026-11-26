@@ -16,7 +16,7 @@ import release_gate  # noqa: E402
 import scaffold_audit  # noqa: E402
 import validate_report  # noqa: E402
 import validate_skill  # noqa: E402
-import ci_evidence  # noqa: E402,F401
+import ci_evidence  # noqa: E402
 
 COMMIT = "abc123"
 INVENTORY = guardianlib.load_inventory()
@@ -228,7 +228,9 @@ class ReleaseGateTests(unittest.TestCase):
         bare = {"id": "payment-verification", "status": "NOT APPLICABLE", "critical": True, "evidence_type": "none"}
         self.assertEqual(decision(document(mandatory_checks=with_check(**bare))), "NO-GO")
         justified = dict(bare, justification="The application takes no payments.")
-        self.assertEqual(decision(document(mandatory_checks=with_check(**justified))), "GO")
+        self.assertIn("without approved_by", reasons(document(mandatory_checks=with_check(**justified))))
+        approved = dict(justified, approved_by="A. Reviewer")
+        self.assertEqual(decision(document(mandatory_checks=with_check(**approved))), "GO")
 
     # Runtime evidence fields
 
@@ -488,6 +490,7 @@ class CiEvidenceTests(unittest.TestCase):
 
     def env(self, **extra):
         environment = {key: value for key, value in os.environ.items() if not key.startswith("GITHUB_")}
+        environment["GITHUB_RUN_ID"] = "1"
         environment.update(extra)
         return environment
 
@@ -666,6 +669,13 @@ class CiTemplateTests(unittest.TestCase):
         self.assertIn("ci_evidence.py", self.workflow)
         self.assertIn("--ci-evidence", self.workflow)
 
+    def test_gate_runs_in_its_own_job_even_when_tests_fail(self):
+        gate = self.workflow.split("  guardian-release:")[1]
+        self.assertIn("needs: guardian-tests", gate)
+        self.assertIn("if: always()", gate)
+        self.assertIn("download-artifact", gate)
+        self.assertNotIn("ci_evidence.py", gate)
+
 
 class HardBenchmarkTests(unittest.TestCase):
     @classmethod
@@ -699,9 +709,7 @@ class HardBenchmarkTests(unittest.TestCase):
                 continue
             completed = run_gate(self.pack / "cases" / name / "docs" / "audits" / "audit-result.json")
             decision = completed.stdout.splitlines()[0]
-            # The gate checks that evidence is complete, not that a command tests anything.
-            expected = "GO" if entry["id"] == "commands-test-nothing" else entry["decision"]
-            self.assertEqual(decision, expected, entry["id"] + completed.stdout)
+            self.assertEqual(decision, entry["decision"], entry["id"] + completed.stdout)
 
     def test_stored_results_reproduce_the_published_scores(self):
         results = ROOT / "evals" / "benchmark" / "results" / "2026-11-26-hard"
@@ -710,6 +718,231 @@ class HardBenchmarkTests(unittest.TestCase):
         graded = self.grade_hard.grade(key, results)
         graded.pop("runs")
         self.assertEqual(graded, json.loads((results / "grade.json").read_text(encoding="utf-8")))
+        for folder in ("2026-11-26-hard-models", "2026-11-26-hard-models-v2"):
+            for model in ("haiku", "sonnet"):
+                runs = results.parent / folder / model
+                graded = self.grade_hard.grade(key, runs)
+                graded.pop("runs")
+                self.assertEqual(graded, json.loads((runs / "grade.json").read_text(encoding="utf-8")), runs)
+
+
+class HardeningTests(unittest.TestCase):
+    """Regression tests for the gaps found in the November 2026 security review."""
+
+    def test_code_renamed_to_a_report_name_is_still_a_change(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path = ReleaseGateTests.committed_repo(None, tmp, "docs/audits")
+            git(repo, "add", "-A")
+            git(repo, "commit", "-q", "-m", "audit")
+            git(repo, "mv", "src/app.py", "docs/audits/security-findings.md")
+            completed = run_gate(path)
+        self.assertEqual(completed.returncode, 1, completed.stdout)
+        self.assertIn("src/app.py", completed.stdout)
+
+    def test_critical_check_needs_a_test_runner_command(self):
+        for command in ("true", "echo tenant isolation verified", "sh -c 'exit 0'"):
+            report = document(mandatory_checks=with_check(**dict(passing_check("ownership", True), command=command)))
+            self.assertIn("not a test runner", reasons(report), command)
+        for command in ("npx vitest run tests/ownership.test.ts", "./node_modules/.bin/jest ownership", "python -m pytest -q"):
+            report = document(mandatory_checks=with_check(**dict(passing_check("ownership", True), command=command)))
+            self.assertEqual(decision(report), "GO", command)
+
+    def test_extra_runner_can_be_allowed(self):
+        report = document(mandatory_checks=with_check(**dict(passing_check("ownership", True), command="mix test")))
+        self.assertEqual(decision(report), "NO-GO")
+        self.assertEqual(decision(report, extra_runners={"mix"}), "GO")
+
+    def test_fixed_high_finding_needs_a_test_runner_command(self):
+        report = document(findings=[fixed_finding(severity="high", command="echo fixed")])
+        self.assertIn("not a test runner", reasons(report))
+
+    def test_high_false_positive_needs_a_challenge(self):
+        closed = fixed_finding(severity="high", status="false_positive")
+        self.assertIn("without a recorded challenge", reasons(document(findings=[closed])))
+        challenged = dict(closed, challenge="RLS policy owner_id = auth.uid() blocks it; other user's read returned 0 rows.")
+        self.assertEqual(decision(document(findings=[challenged])), "GO")
+
+    def test_ci_evidence_must_match_repository_and_attempt(self):
+        report = document()
+        runs = [{"ids": [item["id"]], "command": passing_check(item["id"], item["critical"])["command"], "exit_code": 0}
+                for item in INVENTORY]
+        evidence = {"schema_version": "1.0", "commit": COMMIT, "runs": runs, "repository": "org/app",
+                    "run_attempt": "1", "run_id": "7"}
+        good = {"run_id": "7", "repository": "org/app", "run_attempt": "1"}
+        self.assertEqual(decision(report, ci_evidence=evidence, ci_expected=good), "GO")
+        self.assertIn("different attempt", reasons(report, ci_evidence=evidence, ci_expected=dict(good, run_attempt="2")))
+        self.assertIn("not other/app", reasons(report, ci_evidence=evidence, ci_expected=dict(good, repository="other/app")))
+        self.assertIn("GITHUB_RUN_ID is not set", reasons(report, ci_evidence=evidence, ci_expected={}))
+        forged = dict(evidence, runs=[dict(run, exit_code=False) for run in runs])
+        self.assertIn("exited False", reasons(report, ci_evidence=forged, ci_expected=good))
+        doubled = dict(evidence, runs=runs + runs[:1])
+        self.assertIn("appears in more than one CI run", reasons(report, ci_evidence=doubled, ci_expected=good))
+
+    def test_log_is_capped_while_running_and_both_hashes_are_recorded(self):
+        import hashlib
+
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / "run.log"
+            limit, original = 1000, ci_evidence.MAX_LOG_BYTES
+            ci_evidence.MAX_LOG_BYTES = limit
+            try:
+                result = ci_evidence.run(
+                    [sys.executable, "-c", "import sys; sys.stdout.write('x' * 50000)"], Path(tmp), log, 30, dict(os.environ)
+                )
+            finally:
+                ci_evidence.MAX_LOG_BYTES = original
+            kept = log.read_bytes()
+        self.assertEqual(result["output_bytes"], 50000)
+        self.assertEqual(len(kept), limit)
+        self.assertTrue(result["log_truncated"])
+        self.assertEqual(result["log_sha256"], hashlib.sha256(kept).hexdigest())
+        self.assertEqual(result["output_sha256"], hashlib.sha256(b"x" * 50000).hexdigest())
+
+    @unittest.skipUnless(os.name == "posix", "process groups are POSIX only")
+    def test_background_process_is_stopped_after_the_command(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            marker = Path(tmp) / "late-write"
+            child = f"import time, pathlib; time.sleep(2); pathlib.Path({str(marker)!r}).write_text('x')"
+            script = (
+                "import subprocess, sys; "
+                f"subprocess.Popen([sys.executable, '-c', {child!r}], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)"
+            )
+            ci_evidence.run([sys.executable, "-c", script], Path(tmp), Path(tmp) / "run.log", 30, dict(os.environ))
+            import time
+
+            time.sleep(3)
+            self.assertFalse(marker.exists())
+
+    @unittest.skipUnless(os.name == "posix", "setsid is POSIX only")
+    def test_escaped_child_holding_the_output_does_not_hang_the_run(self):
+        import time
+
+        script = (
+            "import subprocess, sys; "
+            "subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'], start_new_session=True)"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            started = time.monotonic()
+            result = ci_evidence.run([sys.executable, "-c", script], Path(tmp), Path(tmp) / "run.log", 20, dict(os.environ))
+        self.assertLess(time.monotonic() - started, 10)
+        self.assertEqual(result["exit_code"], 0)
+
+    def test_inline_code_cannot_prove_a_critical_control(self):
+        for command in ("python -c pass", "python3 -c 'print(1)'", "node -e 1", "npx -c 'exit 0'"):
+            report = document(mandatory_checks=with_check(**dict(passing_check("ownership", True), command=command)))
+            self.assertIn("inline code", reasons(report), command)
+
+    def test_every_critical_check_not_applicable_is_no_go(self):
+        checks = []
+        for item in INVENTORY:
+            if item["critical"]:
+                checks.append({"id": item["id"], "status": "NOT APPLICABLE", "critical": True, "evidence_type": "none",
+                               "justification": "x", "approved_by": "A. Reviewer"})
+            else:
+                checks.append(passing_check(item["id"], False))
+        self.assertIn("No critical check passed", reasons(document(mandatory_checks=checks)))
+
+    def test_expired_accepted_risk_is_no_go(self):
+        report = document(findings=[medium_finding()], accepted_risks=[risk(expires_at="2020-01-01")])
+        self.assertIn("expired on 2020-01-01", reasons(report))
+        report = document(findings=[medium_finding()], accepted_risks=[risk(expires_at="2999-01-01")])
+        self.assertEqual(decision(report), "CONDITIONAL GO")
+
+    def test_tag_named_like_a_commit_id_does_not_count(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path = ReleaseGateTests.committed_repo(None, tmp, "docs/audits")
+            git(repo, "add", "-A")
+            git(repo, "commit", "-q", "-m", "audit")
+            (repo / "src" / "app.py").write_text("print('v2')\n", encoding="utf-8")
+            git(repo, "commit", "-q", "-am", "change code")
+            git(repo, "tag", "deadbee")
+            path.write_text(json.dumps(document(commit="deadbee", mandatory_checks=all_checks("deadbee"))),
+                            encoding="utf-8")
+            git(repo, "commit", "-q", "-am", "audit")
+            completed = run_gate(path)
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("stale", completed.stdout)
+
+    def test_head_option_must_match_the_checked_out_commit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path = ReleaseGateTests.committed_repo(None, tmp, "docs/audits")
+            first = head_of(repo)
+            (repo / "src" / "app.py").write_text("print('v2')\n", encoding="utf-8")
+            git(repo, "commit", "-q", "-am", "change code")
+            completed = run_gate(path, "--head", first)
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("is not the repository's HEAD", completed.stdout)
+
+    def test_skip_worktree_edit_is_still_a_change(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path = ReleaseGateTests.committed_repo(None, tmp, "docs/audits")
+            git(repo, "update-index", "--skip-worktree", "src/app.py")
+            (repo / "src" / "app.py").write_text("print('hidden')\n", encoding="utf-8")
+            completed = run_gate(path)
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("skip-worktree", completed.stdout)
+
+    def test_submodule_change_is_still_a_change(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            library = Path(tmp) / "library"
+            subprocess.run(["git", "init", "-q", str(library)], check=True)
+            (library / "lib.py").write_text("v1\n", encoding="utf-8")
+            git(library, "add", "-A")
+            git(library, "commit", "-q", "-m", "lib")
+            repo, path = ReleaseGateTests.committed_repo(None, str(Path(tmp) / "app"), "docs/audits")
+            git(repo, "-c", "protocol.file.allow=always", "submodule", "add", "-q", str(library), "vendor")
+            (repo / ".gitmodules").write_text((repo / ".gitmodules").read_text() + "\tignore = all\n")
+            git(repo, "add", "-A")
+            git(repo, "commit", "-q", "-m", "add vendor")
+            head = head_of(repo)
+            path.write_text(json.dumps(document(commit=head, mandatory_checks=all_checks(head))), encoding="utf-8")
+            clean = run_gate(path)
+            (repo / "vendor" / "lib.py").write_text("v2\n", encoding="utf-8")
+            git(repo / "vendor", "commit", "-q", "-am", "change lib")
+            dirty = run_gate(path)
+        self.assertEqual(clean.returncode, 0, clean.stdout + clean.stderr)
+        self.assertEqual(dirty.returncode, 1)
+        self.assertIn("vendor", dirty.stdout)
+
+    @unittest.skipUnless(sys.platform.startswith("linux"), "reads /proc")
+    def test_commands_cannot_read_secrets_from_the_runner_process(self):
+        probe = (
+            "import os, sys\n"
+            "data = open(f'/proc/{os.getppid()}/environ', 'rb').read()\n"
+            "sys.exit(1 if b'GUARDIAN_TEST_SECRET' in data else 0)\n"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path, out = CiEvidenceTests.ci_repo(CiEvidenceTests(), tmp, command="python probe.py")
+            (repo / "probe.py").write_text(probe, encoding="utf-8")
+            git(repo, "add", "-A")
+            git(repo, "commit", "-q", "-m", "probe")
+            env = CiEvidenceTests.env(CiEvidenceTests(), GUARDIAN_TEST_SECRET="value")
+            run_ci(path, out, env=env)
+            evidence = json.loads((out / "ci-evidence.json").read_text(encoding="utf-8"))
+        self.assertEqual(evidence["runs"][0]["exit_code"], 0)
+
+    def test_file_name_that_is_not_utf8_does_not_crash_the_gate(self):
+        if sys.platform == "darwin":
+            self.skipTest("macOS file systems require UTF-8 names")
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path = ReleaseGateTests.committed_repo(None, tmp, "docs/audits")
+            with open(os.path.join(os.fsencode(str(repo)), b"bad\xff.py"), "wb") as handle:
+                handle.write(b"x")
+            completed = run_gate(path)
+        self.assertEqual(completed.returncode, 1, completed.stderr)
+        self.assertNotIn("Traceback", completed.stderr)
+
+    def test_stack_detector_ignores_manifests_outside_the_repository(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            outside = Path(tmp) / "outside.json"
+            outside.write_text(json.dumps({"dependencies": {"stripe": "1"}}), encoding="utf-8")
+            repo = Path(tmp) / "repo"
+            repo.mkdir()
+            (repo / "package.json").symlink_to(outside)
+            self.assertNotIn("stripe", detect_stack.detect(repo))
+            (repo / "package.json").unlink()
+            (repo / "package.json").write_text(json.dumps({"dependencies": {"stripe": "1"}}), encoding="utf-8")
+            self.assertIn("stripe", detect_stack.detect(repo))
 
 
 class SkillValidationTests(unittest.TestCase):
