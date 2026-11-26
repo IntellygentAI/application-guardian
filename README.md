@@ -167,7 +167,9 @@ A worked example with fictional data is in [examples/sample-audit.md](examples/s
 
 ## Results
 
-On 2026-11-26 the skill was tested against the same agent without it, on 18 small cases, three runs each. Both found every defect. With the skill, the agent also said that reading code is not enough to pass a check, and it ran the gate on audit files. Without the skill, it did neither. The skill used about 25% more tokens. The cases, every answer, and the grading script are in [docs/benchmarks.md](docs/benchmarks.md).
+On 2026-11-26 the skill was tested against the same agent without it, on 18 small cases, three runs each. Both found every defect. With the skill, the agent also said that reading code is not enough to pass a check, and it ran the gate on audit files. Without the skill, it did neither. The skill used about 25% more tokens.
+
+A second run used 17 harder cases: defects hidden in another file, secure code that looks wrong, business-logic abuse, and audit repositories with stale, missing, or forged evidence. Again both arms got every case right. With the skill, the agent ran the gate and overrode its GO when the recorded commands tested nothing. Without the skill, the agent more often noticed when an audit's claims did not match the code. The cases, every answer, and the grading scripts are in [docs/benchmarks.md](docs/benchmarks.md).
 
 ## Limits
 

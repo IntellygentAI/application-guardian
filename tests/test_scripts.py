@@ -667,6 +667,51 @@ class CiTemplateTests(unittest.TestCase):
         self.assertIn("--ci-evidence", self.workflow)
 
 
+class HardBenchmarkTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        sys.path.insert(0, str(ROOT / "evals" / "benchmark"))
+        import grade_hard
+        import hard_pack
+
+        cls.grade_hard = grade_hard
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.pack = Path(cls.tmp.name) / "pack"
+        cls.key_path = Path(cls.tmp.name) / "key.json"
+        cls.key = hard_pack.build(cls.pack, cls.key_path)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.tmp.cleanup()
+
+    def test_pack_does_not_name_its_cases(self):
+        self.assertEqual(len(self.key), 17)
+        ids = [entry["id"] for entry in self.key.values()]
+        for path in self.pack.rglob("*"):
+            if path.is_file() and ".git" not in path.parts:
+                text = path.read_text(encoding="utf-8")
+                for case_id in ids:
+                    self.assertNotIn(case_id, text, f"{case_id} appears in {path}")
+
+    def test_gate_decides_each_audit_case_as_documented(self):
+        for name, entry in self.key.items():
+            if entry["kind"] != "gate":
+                continue
+            completed = run_gate(self.pack / "cases" / name / "docs" / "audits" / "audit-result.json")
+            decision = completed.stdout.splitlines()[0]
+            # The gate checks that evidence is complete, not that a command tests anything.
+            expected = "GO" if entry["id"] == "commands-test-nothing" else entry["decision"]
+            self.assertEqual(decision, expected, entry["id"] + completed.stdout)
+
+    def test_stored_results_reproduce_the_published_scores(self):
+        results = ROOT / "evals" / "benchmark" / "results" / "2026-11-26-hard"
+        key = json.loads((results / "key.json").read_text(encoding="utf-8"))
+        self.assertEqual(key, self.key)
+        graded = self.grade_hard.grade(key, results)
+        graded.pop("runs")
+        self.assertEqual(graded, json.loads((results / "grade.json").read_text(encoding="utf-8")))
+
+
 class SkillValidationTests(unittest.TestCase):
     def test_repository_skill_is_valid(self):
         self.assertEqual(validate_skill.validate(), [])

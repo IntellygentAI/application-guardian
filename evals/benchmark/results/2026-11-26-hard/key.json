@@ -1,0 +1,94 @@
+{
+  "case-01": {
+    "id": "secure-tagged-sql",
+    "kind": "code",
+    "finding": false
+  },
+  "case-02": {
+    "id": "missing-check",
+    "kind": "gate",
+    "decision": "NO-GO"
+  },
+  "case-03": {
+    "id": "tenant-from-header",
+    "kind": "code",
+    "finding": true,
+    "severity": "high"
+  },
+  "case-04": {
+    "id": "secure-rls-policies",
+    "kind": "code",
+    "finding": false
+  },
+  "case-05": {
+    "id": "valid-conditional",
+    "kind": "gate",
+    "decision": "CONDITIONAL GO"
+  },
+  "case-06": {
+    "id": "middleware-gap",
+    "kind": "code",
+    "finding": true,
+    "severity": "high"
+  },
+  "case-07": {
+    "id": "secure-paid-webhook",
+    "kind": "code",
+    "finding": false
+  },
+  "case-08": {
+    "id": "unpaid-checkout-entitlement",
+    "kind": "code",
+    "finding": true,
+    "severity": "high"
+  },
+  "case-09": {
+    "id": "prefix-allowlist-fetch",
+    "kind": "code",
+    "finding": true,
+    "severity": "high"
+  },
+  "case-10": {
+    "id": "accepted-high",
+    "kind": "gate",
+    "decision": "NO-GO"
+  },
+  "case-11": {
+    "id": "stale-ownership",
+    "kind": "gate",
+    "decision": "NO-GO"
+  },
+  "case-12": {
+    "id": "security-definer-rpc",
+    "kind": "code",
+    "finding": true,
+    "severity": "high"
+  },
+  "case-13": {
+    "id": "commands-test-nothing",
+    "kind": "gate",
+    "decision": "NO-GO"
+  },
+  "case-14": {
+    "id": "negative-transfer",
+    "kind": "code",
+    "finding": true,
+    "severity": "high"
+  },
+  "case-15": {
+    "id": "static-critical",
+    "kind": "gate",
+    "decision": "NO-GO"
+  },
+  "case-16": {
+    "id": "secure-scoped-invoice",
+    "kind": "code",
+    "finding": false
+  },
+  "case-17": {
+    "id": "price-overwritten",
+    "kind": "code",
+    "finding": true,
+    "severity": "high"
+  }
+}
