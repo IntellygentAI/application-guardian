@@ -1,0 +1,51 @@
+{
+  "date": "2026-11-26",
+  "pack": "hard_pack.py with runnable tests and an approved NOT APPLICABLE check (this change)",
+  "skill": "the hardened skill in this change",
+  "models": {
+    "haiku": "claude-haiku-5-5",
+    "sonnet": "claude-sonnet-5-5"
+  },
+  "runs": {
+    "haiku-baseline-1": {
+      "tokens": 92762,
+      "tool_calls": 15,
+      "seconds": 120.6
+    },
+    "haiku-baseline-2": {
+      "tokens": 107583,
+      "tool_calls": 19,
+      "seconds": 140.9
+    },
+    "haiku-skill-1": {
+      "tokens": 109810,
+      "tool_calls": 18,
+      "seconds": 146.2
+    },
+    "haiku-skill-2": {
+      "tokens": 107166,
+      "tool_calls": 21,
+      "seconds": 144.3
+    },
+    "sonnet-baseline-1": {
+      "tokens": 82037,
+      "tool_calls": 9,
+      "seconds": 58.9
+    },
+    "sonnet-baseline-2": {
+      "tokens": 64848,
+      "tool_calls": 12,
+      "seconds": 61.1
+    },
+    "sonnet-skill-1": {
+      "tokens": 83985,
+      "tool_calls": 10,
+      "seconds": 45.9
+    },
+    "sonnet-skill-2": {
+      "tokens": 71797,
+      "tool_calls": 10,
+      "seconds": 44.9
+    }
+  }
+}
