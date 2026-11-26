@@ -51,6 +51,8 @@ Asking the agent to be careful is not enough. Application Guardian tells it exac
 
 **Access**
 - One user reading or changing another user's records, invoices, files, or messages
+- A deleted or suspended account whose signed token still works because the server never checks a session
+- A second server that sends the user back to login because the session lived in the first process's memory
 - Admin actions that are hidden in the interface but still callable
 - Database rules that let any signed-in user read every row
 
@@ -73,9 +75,10 @@ Asking the agent to be careful is not enough. Application Guardian tells it exac
 
 **Notices and third parties**
 - A privacy notice that omits a service the code sends personal data to
-- A delete button that hides the account and leaves the data
-- Analytics or advertising tags that run before the user agrees
-- A subscription that is easy to start and hard to stop
+- A delete button that hides the account and leaves the data, or no way to ask for deletion
+- Analytics or advertising tags that run before the user agrees, including an Accept-only cookie banner
+- A subscription that is easy to start and hard to stop, or a mandatory fee that appears after payment details
+- Hardcoded reviews, unlicensed stock images, and marketing email with no unsubscribe
 
 The full checklists are in `references/`. Each file covers one area, and the agent reads it only when that area applies.
 

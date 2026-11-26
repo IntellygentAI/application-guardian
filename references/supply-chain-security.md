@@ -27,6 +27,7 @@ Dependency inspection inside the application repository is also covered in [prod
 - Outbound mail can be authenticated with SPF, DKIM, and DMARC where the product sends mail. Record NOT TESTED when DNS cannot be inspected.
 - Password reset and notification messages do not include secrets in the URL beyond a single short-lived token.
 - SMS and email verification routes are rate limited. A caller cannot generate unbounded provider cost. SMS pumping is treated as a cost and abuse issue.
+- Commercial and marketing email includes a working unsubscribe and the sender's postal address. The rule is in [legal-exposure.md](legal-exposure.md).
 
 ## Other delivery edges
 

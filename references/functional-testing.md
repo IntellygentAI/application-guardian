@@ -77,7 +77,7 @@ Also test a membership or permission change that races the action it was meant t
 - Change email, reset password, delete the account, and register again with the deleted email.
 - Log in on two devices, log out from one, revoke all sessions, delete an account while another session is active, and remove a user from an organisation while they are signed in.
 
-Incomplete accounts must be handled. Identity linking must be secure. Deleted accounts must not regain old private data. Session behaviour must match the documented product policy.
+Incomplete accounts must be handled. Identity linking must be secure. Deleted accounts must not regain old private data. Session behaviour must match the documented product policy. A signed access token that still works after the account is deleted is the case in [security-testing.md](security-testing.md).
 
 ## Device permissions
 
