@@ -135,14 +135,16 @@
       "status": "NOT APPLICABLE",
       "critical": true,
       "evidence_type": "none",
-      "justification": "The sample application takes no payments."
+      "justification": "The sample application takes no payments.",
+      "approved_by": "Sample Reviewer"
     },
     {
       "id": "duplicate-prevention",
       "status": "NOT APPLICABLE",
       "critical": true,
       "evidence_type": "none",
-      "justification": "The sample application has no payments, coupons, or credits."
+      "justification": "The sample application has no payments, coupons, or credits.",
+      "approved_by": "Sample Reviewer"
     },
     {
       "id": "regression-tests",
@@ -293,7 +295,8 @@
       "status": "NOT APPLICABLE",
       "critical": true,
       "evidence_type": "none",
-      "justification": "The sample application has no AI features."
+      "justification": "The sample application has no AI features.",
+      "approved_by": "Sample Reviewer"
     },
     {
       "id": "build-and-tests",

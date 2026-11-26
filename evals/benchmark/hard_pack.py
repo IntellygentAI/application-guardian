@@ -450,18 +450,24 @@ export async function POST(request: Request) {
     ),
 ]
 
-TEST_FILE = """from tests.release.helpers import client_for
+TEST_FILE = """import unittest
+
+from src.routes import get_invoice
 
 
-def test_{name}_allowed_and_denied():
-    owner, other = client_for("owner"), client_for("other")
-    assert owner.get("/api/{path}").status_code == 200
-    assert other.get("/api/{path}").status_code in (403, 404)
+class {cls}(unittest.TestCase):
+    def test_owner_allowed_and_other_user_denied(self):
+        self.assertEqual(get_invoice("owner", "inv-1")[0], 200)
+        self.assertEqual(get_invoice("other", "inv-1")[0], 404)
+
+
+if __name__ == "__main__":
+    unittest.main()
 """
 
 
 def command(check_id: str) -> str:
-    return f"pytest tests/release/test_{check_id.replace('-', '_')}.py -q"
+    return f"python -m unittest -q tests.release.test_{check_id.replace('-', '_')}"
 
 
 def passing(check: dict, commit: str, **overrides) -> dict:
@@ -474,7 +480,7 @@ def passing(check: dict, commit: str, **overrides) -> dict:
         "command": command(check["id"]),
         "exit_code": 0,
         "expected": "allowed and denied cases behave as specified",
-        "observed": "2 passed",
+        "observed": "Ran 1 test, OK",
         "executed_at": "2026-11-26T09:00:00Z",
     }
     record.update(overrides)
@@ -547,19 +553,26 @@ class Repo:
 
 
 def app_files(version: int) -> dict[str, str]:
+    """A small app whose release tests really run and pass with the standard library."""
     files = {
+        ".gitignore": "__pycache__/\n",
         "README.md": "# Invoices app\n\nA small invoicing service used for release reviews.\n",
+        "src/__init__.py": "",
         "src/routes.py": (
-            "from .auth import require_user\nfrom .db import invoices\n\n\n"
-            "@require_user\ndef get_invoice(user, invoice_id):\n"
-            f"    invoice = invoices.get(invoice_id, owner_id=user.id)  # v{version}\n"
-            "    return invoice or (404, 'not found')\n"
+            "INVOICES = {\"inv-1\": {\"owner_id\": \"owner\", \"total_cents\": 1200}}\n\n\n"
+            "def get_invoice(user_id, invoice_id):\n"
+            f"    invoice = INVOICES.get(invoice_id)  # v{version}\n"
+            "    if invoice is None or invoice[\"owner_id\"] != user_id:\n"
+            "        return 404, {\"error\": \"not found\"}\n"
+            "    return 200, {\"id\": invoice_id, \"total_cents\": invoice[\"total_cents\"]}\n"
         ),
-        "tests/release/helpers.py": "def client_for(name):\n    raise NotImplementedError('provided by the test harness')\n",
+        "tests/__init__.py": "",
+        "tests/release/__init__.py": "",
     }
     for check in INVENTORY:
         name = check["id"].replace("-", "_")
-        files[f"tests/release/test_{name}.py"] = TEST_FILE.format(name=name, path=check["id"])
+        cls = "".join(part.title() for part in check["id"].split("-")) + "Test"
+        files[f"tests/release/test_{name}.py"] = TEST_FILE.format(cls=cls)
     return files
 
 
@@ -587,7 +600,7 @@ def build_gate_case(case_id: str, folder: Path) -> None:
         findings = [{
             "id": "AG-004", "title": "Password reset tokens do not expire", "severity": "high", "status": "accepted",
             "confidence": "confirmed", "evidence_type": "runtime", "location": "src/reset.py:31", "commit": head,
-            "command": "pytest tests/test_reset.py::test_token_expires -q", "exit_code": 1,
+            "command": "python -m unittest -q tests.test_reset", "exit_code": 1,
             "expected": "a token older than one hour is rejected", "observed": "a two-day-old token was accepted",
             "executed_at": "2026-11-26T09:00:00Z",
         }]
@@ -599,14 +612,15 @@ def build_gate_case(case_id: str, folder: Path) -> None:
     elif case_id == "valid-conditional":
         checks = [
             passing(c, head, status="NOT APPLICABLE", evidence_type="none", command="", exit_code=None,
-                    observed="", justification="The service has no AI features or model calls.")
+                    observed="", justification="The service has no AI features or model calls.",
+                    approved_by="M. Okafor")
             if c["id"] == "ai-permissions" else passing(c, head)
             for c in INVENTORY
         ]
         findings = [{
             "id": "AG-007", "title": "Login has no per-account rate limit", "severity": "medium", "status": "accepted",
             "confidence": "confirmed", "evidence_type": "runtime", "location": "src/auth.py:18", "commit": head,
-            "command": "pytest tests/test_login.py::test_rate_limit -q", "exit_code": 1,
+            "command": "python -m unittest -q tests.test_login", "exit_code": 1,
             "expected": "the 11th attempt in a minute is refused", "observed": "50 attempts in a minute were all processed",
             "executed_at": "2026-11-26T09:00:00Z",
         }]

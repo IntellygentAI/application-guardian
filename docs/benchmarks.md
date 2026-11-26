@@ -1,5 +1,44 @@
 # Benchmarks
 
+## 2026-11-26: harder cases on smaller models
+
+**Result: on smaller models the skill stopped unsafe releases.** The hard cases below were run with Claude Haiku 5.5 and Claude Sonnet 5.5, two runs per arm, in two rounds: first with the skill and pack as published, then with the hardened skill and the corrected pack from this change. Every model found every defect, with or without the skill. The difference was in the release decisions.
+
+The measure that matters most is an **unsafe approval**: GO or CONDITIONAL GO on one of the five audits that must be NO-GO.
+
+| | Without the skill | With the skill |
+| --- | --- | --- |
+| Opus 5.5 (previous section) | 0 / 15 | 0 / 15 |
+| Haiku, round 1 | 4 / 10 | 0 / 10 |
+| Sonnet, round 1 | 2 / 10 | 2 / 10 |
+| Haiku, round 2 (hardened skill) | 3 / 10 | 0 / 10 |
+| Sonnet, round 2 (hardened skill) | 1 / 10 | 0 / 10 |
+
+What the unsafe approvals were:
+
+- **Without the skill:** an accepted high-severity flaw (password reset tokens that never expire) recorded as CONDITIONAL GO in both Haiku runs of round 2; a missing critical check recorded as GO; stale `ownership` evidence passed because the later change "is comment-only" (both Sonnet runs of round 1); and the audit whose critical checks "passed" with `true` and `echo` recorded as GO.
+- **With the skill:** only the forged audit, in both Sonnet runs of round 1. The gate printed GO and the agent trusted it. The gate now returns NO-GO when a critical check's command is not a test runner, and in round 2 neither model made an unsafe approval with the skill.
+
+Full scores, round 2:
+
+| | Haiku without | Haiku with | Sonnet without | Sonnet with |
+| --- | --- | --- | --- | --- |
+| Graded checks passed | 43 / 48 | 43 / 48 | 47 / 48 | 48 / 48 |
+| Defects detected | 14 / 14 | 14 / 14 | 14 / 14 | 14 / 14 |
+| False positives on secure code | 2 / 8 | 3 / 8 | 0 / 8 | 0 / 8 |
+| Correct release decision | 9 / 12 | 10 / 12 | 11 / 12 | 12 / 12 |
+| Mean tokens per run | 100,172 | 108,488 | 73,442 | 77,891 |
+| Mean time per run | 130.8 s | 145.2 s | 60.0 s | 45.4 s |
+
+Round 1 scores are in `evals/benchmark/results/2026-11-26-hard-models/`, round 2 in `evals/benchmark/results/2026-11-26-hard-models-v2/`.
+
+Where the skill did worse:
+
+- **Haiku raised more low-severity notes on secure code** (3 against 2 in round 2, 4 against 2 in round 1), such as an unescaped `LIKE` wildcard or a foreign key without `ON DELETE CASCADE`. The strict rule counts any finding on a decoy as a false positive.
+- **Haiku with the skill rejected the audit that should be CONDITIONAL GO**, in both runs of both rounds. In round 1 the recorded tests were stubs that failed when re-run, a flaw in the pack that is now fixed. In round 2 it said that all 25 test files run the same ownership test under different names, and that the accepted finding cites files not in the repository. Both points are true of the pack. The skill now tells the agent to check that each command exercises the control it claims, and Haiku did. A fair valid audit needs a distinct test per check, which the pack does not yet have, so this case should be read as a limit of the pack, not of either arm.
+
+Two runs per arm is a small sample: read these as directions, not rates. Agent isolation relied on the prompt's rules, not file permissions.
+
 ## 2026-11-26: harder cases
 
 **Result: both arms passed all 72 graded checks again.** The model found every subtle defect and made no false positives, with or without the skill. The skill changed how the agent worked, not what it found, and in two cases it made the agent look less closely.
@@ -48,7 +87,7 @@ The same as the first run, with these differences:
 - **Cases:** built by [`evals/benchmark/hard_pack.py`](../evals/benchmark/hard_pack.py) with seed 20261127. Folders have neutral names in a shuffled order, comments that explain why a decoy is safe were removed, and audit repositories use fixed commit dates, so every build is identical. The answer key is written outside the pack.
 - **Prompt:** the same as the first run, adjusted for 17 cases and Git repositories, and without the `check_status` and `full_audit` keys. See [`evals/benchmark/prompts.md`](../evals/benchmark/prompts.md).
 - **Skill under test:** commit `4a2dee4`. The skill arm received `SKILL.md`, `references/`, `scripts/`, `schemas/`, `templates/`, and `docs/ci.md`.
-- **Isolation:** the key and every copy of this repository were made unreadable during the runs.
+- **Isolation:** the key and every copy of this repository were kept outside the folders the agents were allowed to open, and the prompt forbade reading anywhere else. The agents ran as the same operating-system user, so this relied on the instruction, not on file permissions.
 - **Grading:** fixed rules in [`evals/benchmark/grade_hard.py`](../evals/benchmark/grade_hard.py). Raw answers, the key, cost per run, and scores are in `evals/benchmark/results/2026-11-26-hard/`.
 
 ### What this means
@@ -98,7 +137,7 @@ Both arms named the missing idempotency key in the retry case (3 / 3 each), so t
 - **Model:** Claude Opus 5.5 for every run. One fresh agent per run, with file and shell tools, all 18 cases in one session.
 - **Cases:** built by [`evals/benchmark/build_pack.py`](../evals/benchmark/build_pack.py) from [`evals/evals.json`](../evals/evals.json). Case folders have neutral names in a fixed shuffled order. The "Synthetic fixture" comments that describe each defect were removed. The secret case uses a fake service-role JWT built at run time.
 - **Prompts:** identical except one paragraph that points the skill arm at `SKILL.md`. See [`evals/benchmark/prompts.md`](../evals/benchmark/prompts.md).
-- **Isolation:** the answer key and every copy of this repository were moved out of the agents' reach during the runs. The skill arm received only `SKILL.md`, `references/`, `scripts/`, `schemas/`, and `templates/`.
+- **Isolation:** the answer key and every copy of this repository were kept outside the folders the agents were allowed to open, and the prompt forbade reading anywhere else. This relied on the instruction, not on file permissions. The skill arm received only `SKILL.md`, `references/`, `scripts/`, `schemas/`, and `templates/`.
 - **Skill under test:** the skill files in the change that added this page, byte for byte.
 - **Grading:** fixed rules in [`evals/benchmark/grade.py`](../evals/benchmark/grade.py) against the files in `evals/expected-results/`. No person or model scored the answers.
 - **Raw data:** every answer, the key, per-run cost, and the grading output are in `evals/benchmark/results/2026-11-26/`, with the scores in [`grade.json`](../evals/benchmark/results/2026-11-26/grade.json).

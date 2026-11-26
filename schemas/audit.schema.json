@@ -43,7 +43,8 @@
           "expected": {"type": "string"},
           "observed": {"type": "string"},
           "executed_at": {"type": "string"},
-          "justification": {"type": "string"}
+          "justification": {"type": "string"},
+          "approved_by": {"type": "string"}
         }
       }
     },

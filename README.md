@@ -93,10 +93,12 @@ It returns NO-GO when:
 - a critical or high finding is open, or was marked fixed without a passing test on the current commit
 - any of the [25 mandatory checks](schemas/mandatory-checks.json) is missing, failed, or not run
 - a check passed without a recorded command, exit code, result, and commit
-- a critical check passed on code review alone, without a test that ran
+- a critical check passed on code review alone, without a test that ran, or with a command such as `true`, `echo`, or `python -c` that tests nothing
+- a critical check is NOT APPLICABLE without a named approver, or no critical check passed with a test
+- a critical or high finding was closed as a false positive without a recorded challenge
 - the evidence was recorded on a different commit, or files other than the audit reports have uncommitted changes
 - the audit file is not in a Git repository, or `git status` fails
-- an accepted risk has no owner and approver, or is high or critical
+- an accepted risk has no owner and approver, is high or critical, or has expired
 - in CI, a recorded command was not re-run, or failed when CI ran it
 
 CONDITIONAL GO means only medium or low risks remain, and each was accepted by a named person. A GO written in a report does not count. Only the script's output does.
@@ -169,7 +171,9 @@ A worked example with fictional data is in [examples/sample-audit.md](examples/s
 
 On 2026-11-26 the skill was tested against the same agent without it, on 18 small cases, three runs each. Both found every defect. With the skill, the agent also said that reading code is not enough to pass a check, and it ran the gate on audit files. Without the skill, it did neither. The skill used about 25% more tokens.
 
-A second run used 17 harder cases: defects hidden in another file, secure code that looks wrong, business-logic abuse, and audit repositories with stale, missing, or forged evidence. Again both arms got every case right. With the skill, the agent ran the gate and overrode its GO when the recorded commands tested nothing. Without the skill, the agent more often noticed when an audit's claims did not match the code. The cases, every answer, and the grading scripts are in [docs/benchmarks.md](docs/benchmarks.md).
+A second run used 17 harder cases: defects hidden in another file, secure code that looks wrong, business-logic abuse, and audit repositories with stale, missing, or forged evidence. Opus 5.5 got every case right with or without the skill.
+
+On smaller models the skill made a difference. Without it, Haiku 5.5 and Sonnet 5.5 approved 10 of 40 audits that should have been blocked, including an accepted high-severity flaw and evidence from an older commit. With the hardened skill they approved none of 20. They found the same defects either way. The cases, every answer, and the grading scripts are in [docs/benchmarks.md](docs/benchmarks.md).
 
 ## Limits
 
