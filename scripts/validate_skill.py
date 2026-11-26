@@ -36,6 +36,7 @@ REQUIRED = (
     "references/agent-mcp-security.md",
     "references/threat-modelling.md",
     "references/supply-chain-security.md",
+    "references/orchestration.md",
     "references/verification-protocol.md",
     "references/finding-verification.md",
     "references/framework-specific/nextjs.md",

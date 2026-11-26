@@ -23,7 +23,7 @@ It works with any stack. Supabase, Firebase, Stripe, Next.js, Django, and FastAP
 ## How it works
 
 1. You ask your agent for a scan or an audit.
-2. The agent works out your stack and reads only the checklists that apply to it.
+2. The agent writes down the task, the commit, and what is in scope, then works out your stack from the repository and reads only the checklists that apply to it. It does not describe code it has not opened.
 3. It tries each risk the way a real user could: a second account, the same request sent twice, a dropped connection. It records what it ran and what came back.
 4. It writes the findings to `docs/audits/`.
 5. `release_gate.py` reads that evidence and returns GO, CONDITIONAL GO, or NO-GO. On NO-GO you fix, retest, and run the gate again.

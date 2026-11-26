@@ -15,6 +15,8 @@ State the release recommendation and the few findings that decide it. Do not cla
 
 ## Scope
 
+Request, mode, scope, commit, and done when, as written at the start (see `references/orchestration.md`):
+
 In scope:
 
 Out of scope:
@@ -26,6 +28,8 @@ Known, assumed, and not available:
 Stack, trust boundaries, roles, data stores, auth, payments, storage, AI, and deployment. Describe only what was inspected.
 
 ## Methods
+
+Coverage: each area or path, whether it was reviewed, how, and why anything was not.
 
 Static review, tests executed, and runtime checks. Name the commands and the environment.
 

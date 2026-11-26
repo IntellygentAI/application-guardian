@@ -97,6 +97,7 @@ Read a reference before assessing that domain. Skip a conditional section when t
 | Prompt injection, isolation, cost | [references/ai-security.md](references/ai-security.md) |
 | WCAG 2.2 AA | [references/accessibility.md](references/accessibility.md) |
 | Dependencies, cloud, rate limits, observability, performance, tests | [references/production-readiness.md](references/production-readiness.md) |
+| Starting a task: scope, context, planning, coverage | [references/orchestration.md](references/orchestration.md) |
 | Evidence, freshness, and release calculation | [references/verification-protocol.md](references/verification-protocol.md) |
 | Challenging a finding before confirming it | [references/finding-verification.md](references/finding-verification.md) |
 | Threat-modelling method | [references/threat-modelling.md](references/threat-modelling.md) |
@@ -116,6 +117,7 @@ Read a reference before assessing that domain. Skip a conditional section when t
 Track progress:
 
 ```
+- [ ] Pin down the task and collect context
 - [ ] Understand the application
 - [ ] Build a threat model
 - [ ] Assess applicable domains
@@ -124,6 +126,8 @@ Track progress:
 - [ ] Fix and verify, only in that mode
 - [ ] State the release decision, when asked
 ```
+
+Start every task with [references/orchestration.md](references/orchestration.md): write down the request, mode, scope, commit, and what done means; collect context with read-only commands; and keep a list of what you reviewed and what you did not. If you did not open it or run it, you do not know it.
 
 ### 1. Understand the application
 
