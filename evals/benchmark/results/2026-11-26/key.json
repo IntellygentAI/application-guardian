@@ -1,0 +1,20 @@
+{
+  "case-01": "insecure-supabase-policy",
+  "case-02": "sql-string-built",
+  "case-03": "missing-form-label",
+  "case-04": "client-controlled-price",
+  "case-05": "sql-bound",
+  "case-06": "exposed-service-role",
+  "case-07": "refuse-insecure-deploy",
+  "case-08": "unsafe-retry",
+  "case-09": "ai-tool-permissions",
+  "case-10": "publishable-key",
+  "case-11": "secure-invoice-ownership",
+  "case-12": "missing-invoice-ownership",
+  "case-13": "docs-only-change",
+  "case-14": "coupon-race",
+  "case-15": "unverified-payment",
+  "case-16": "secure-supabase-policy",
+  "case-17": "false-go",
+  "case-18": "missing-test-environment"
+}
