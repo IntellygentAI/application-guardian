@@ -33,10 +33,11 @@ def _text(item: dict[str, Any], key: str) -> str:
     return str(item.get(key) or "").strip()
 
 
-def _missing_execution(item: dict[str, Any], reference: str) -> list[str]:
+def _missing_execution(item: dict[str, Any], reference: str, current: set[str] | None = None) -> list[str]:
     """Name what an executed, passing run on the reference commit still lacks."""
     missing = []
-    if _text(item, "commit") != reference:
+    current = current or {reference}
+    if _text(item, "commit") not in current:
         missing.append(f"commit {reference}")
     if not _text(item, "command"):
         missing.append("command")
@@ -54,13 +55,21 @@ def decide(
     inventory: list[dict[str, Any]] | None = None,
     worktree_changes: list[str] | None = None,
     worktree_verified: bool = True,
+    equivalent_commits: set[str] | None = None,
+    ci_evidence: dict[str, Any] | None = None,
+    ci_expected: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Return a decision, the reasons, and whether release is allowed.
 
     inventory defaults to schemas/mandatory-checks.json. worktree_changes are
     paths with uncommitted changes that are not audit reports; the CLI fills
     it. worktree_verified is False when the CLI could not run git status, and
-    the decision is then NO-GO.
+    the decision is then NO-GO. equivalent_commits are earlier commits whose
+    code is identical to HEAD: only audit reports changed since. Evidence
+    recorded on them is current. ci_evidence is the file written by
+    ci_evidence.py; when given, every runtime PASS and every fixed critical or
+    high finding needs a matching passing run in it. ci_expected holds the
+    values the evidence must match: audit_sha256 and run_id.
     """
     reasons: list[str] = []
     findings = document.get("findings") or []
@@ -69,11 +78,14 @@ def decide(
 
     audited = _text(document, "commit")
     head = _text(document, "head_commit")
-    if audited and head and audited != head:
+    equivalent = set(equivalent_commits or ())
+    if audited and head and audited != head and audited not in equivalent:
         reasons.append(f"Evidence was recorded at {audited} and HEAD is {head}. The evidence is stale.")
 
-    # The commit the release is for. Evidence from any other commit is stale.
+    # The commit the release is for. Evidence from any other commit is stale,
+    # unless only audit reports changed between that commit and this one.
     reference = head or audited
+    current = {reference} | equivalent
 
     if not worktree_verified:
         reasons.append(
@@ -115,7 +127,7 @@ def decide(
                     "A fix is verified only by an executed test."
                 )
                 continue
-            missing = _missing_execution(finding, reference)
+            missing = _missing_execution(finding, reference, current)
             if missing:
                 reasons.append(
                     f"{finding_id} is a {severity} finding marked fixed, but its verification lacks "
@@ -179,7 +191,7 @@ def decide(
                     f"{check_id} passed with no recorded commit. Evidence that cannot be tied to a commit is not fresh."
                 )
                 continue
-            if reference and check_commit != reference:
+            if reference and check_commit not in current:
                 reasons.append(f"{check_id} passed at {check_commit}, not at {reference}. The evidence is stale.")
                 continue
             if critical and evidence in RUNTIME_REQUIRED:
@@ -188,7 +200,7 @@ def decide(
                 )
                 continue
             if evidence == "runtime":
-                missing = _missing_execution(check, reference)
+                missing = _missing_execution(check, reference, current)
                 if missing:
                     reasons.append(f"{check_id} passed without a recorded run: missing {', '.join(missing)}.")
                     continue
@@ -209,6 +221,9 @@ def decide(
     if checks and passed == 0:
         reasons.append("No mandatory check has a PASS result.")
 
+    if ci_evidence is not None:
+        reasons.extend(ci_reasons(document, ci_evidence, reference, ci_expected or {}))
+
     if reasons:
         decision = NO_GO
     elif accepted_lower:
@@ -222,3 +237,60 @@ def decide(
         "release_allowed": decision in {GO, CONDITIONAL},
         "passed_checks": passed,
     }
+
+
+CI_SCHEMA_VERSION = "1.0"
+
+
+def recorded_runs(document: dict[str, Any]) -> list[tuple[str, str]]:
+    """Return (id, command) for every run that CI must repeat.
+
+    These are runtime PASS checks and fixed critical or high findings: the
+    places where the gate trusts an executed command.
+    """
+    runs = []
+    for check in document.get("mandatory_checks") or []:
+        if _text(check, "status") == "PASS" and _text(check, "evidence_type") == "runtime":
+            runs.append((_text(check, "id"), _text(check, "command")))
+    for finding in document.get("findings") or []:
+        if (
+            _text(finding, "status").lower() == "fixed"
+            and _text(finding, "severity").lower() in BLOCKING_SEVERITIES
+        ):
+            runs.append((_text(finding, "id"), _text(finding, "command")))
+    return runs
+
+
+def ci_reasons(
+    document: dict[str, Any], evidence: dict[str, Any], head: str, expected: dict[str, str]
+) -> list[str]:
+    """Compare the audit's recorded runs with what CI actually ran."""
+    if not isinstance(evidence, dict) or evidence.get("schema_version") != CI_SCHEMA_VERSION:
+        return [f"CI evidence is not a version {CI_SCHEMA_VERSION} evidence file."]
+    reasons = []
+    if _text(evidence, "commit") != head:
+        reasons.append(f"CI evidence was produced at {_text(evidence, 'commit') or 'no commit'}, not at {head}.")
+    run_id = expected.get("run_id")
+    if run_id and _text(evidence, "run_id") != run_id:
+        reasons.append("CI evidence comes from a different workflow run. It must be produced in this run.")
+    audit_hash = expected.get("audit_sha256")
+    if audit_hash and _text(evidence, "audit_sha256") != audit_hash:
+        reasons.append("The audit file changed after CI ran the recorded commands.")
+    by_id: dict[str, dict[str, Any]] = {}
+    for run in evidence.get("runs") or []:
+        if isinstance(run, dict):
+            for item_id in run.get("ids") or []:
+                by_id[str(item_id)] = run
+    for item_id, command in recorded_runs(document):
+        run = by_id.get(item_id)
+        if run is None:
+            reasons.append(f"{item_id}: CI has no run of its recorded command.")
+        elif _text(run, "command") != command:
+            reasons.append(f"{item_id}: CI ran a different command from the one recorded.")
+        elif run.get("rejected"):
+            reasons.append(f"{item_id}: CI refused to run the command: {_text(run, 'rejected')}.")
+        elif run.get("timed_out"):
+            reasons.append(f"{item_id}: the command timed out in CI.")
+        elif run.get("exit_code") != 0:
+            reasons.append(f"{item_id}: the command exited {run.get('exit_code')} in CI.")
+    return reasons
