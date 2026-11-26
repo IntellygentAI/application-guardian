@@ -1,0 +1,30 @@
+{
+  "description": "Mandatory release checks. release_gate.py requires every id in an audit result. Each row matches templates/release-checklist.md. A check that is critical here cannot be recorded as non-critical.",
+  "checks": [
+    {"id": "authentication", "title": "Authentication works securely", "critical": true},
+    {"id": "ownership", "title": "Resource ownership is enforced", "critical": true},
+    {"id": "admin-operations", "title": "Administrative operations are protected", "critical": true},
+    {"id": "tenant-isolation", "title": "Tenant isolation is verified", "critical": true},
+    {"id": "database-policies", "title": "Database access policies are verified", "critical": true},
+    {"id": "secrets", "title": "No known exposed production secrets remain", "critical": true},
+    {"id": "response-fields", "title": "Sensitive fields are not returned unnecessarily", "critical": false},
+    {"id": "storage-permissions", "title": "File storage permissions are correct", "critical": true},
+    {"id": "upload-validation", "title": "Upload validation is effective", "critical": false},
+    {"id": "payment-verification", "title": "Payment verification is secure", "critical": true},
+    {"id": "duplicate-prevention", "title": "Duplicate payments and redemptions are prevented", "critical": true},
+    {"id": "regression-tests", "title": "Critical workflows have regression tests", "critical": false},
+    {"id": "account-deletion", "title": "Account deletion behaves correctly", "critical": false},
+    {"id": "session-invalidation", "title": "Session invalidation works as intended", "critical": false},
+    {"id": "abuse-protection", "title": "Abuse-prone endpoints have appropriate protections", "critical": false},
+    {"id": "error-disclosure", "title": "Error messages do not expose internal information", "critical": false},
+    {"id": "security-logging", "title": "Security-relevant logging is available", "critical": false},
+    {"id": "dependency-risk", "title": "Dependency risks are assessed", "critical": false},
+    {"id": "accessibility", "title": "Critical accessibility problems are addressed", "critical": false},
+    {"id": "layouts", "title": "Mobile and desktop layouts are usable", "critical": false},
+    {"id": "network-failures", "title": "Network failures are handled appropriately", "critical": false},
+    {"id": "backup-recovery", "title": "Backup and recovery are verified where applicable", "critical": false},
+    {"id": "deployment-config", "title": "Production deployment configuration is reviewed", "critical": false},
+    {"id": "ai-permissions", "title": "AI integrations enforce independent permissions and usage limits", "critical": true},
+    {"id": "build-and-tests", "title": "Build, lint, type checks, and mandatory tests succeed", "critical": false}
+  ]
+}

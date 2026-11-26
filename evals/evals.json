@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
-  "measurement_status": "not_measured",
-  "note": "Expected behaviour for a future agent comparison. agent_result is null because no agent was run.",
+  "measurement_status": "measured 2026-11-26, see docs/benchmarks.md",
+  "note": "Case definitions and expected behaviour. Agent results are stored per run in evals/benchmark/results/, not here. See docs/benchmarks.md.",
   "cases": [
     {
       "id": "insecure-supabase-policy",
