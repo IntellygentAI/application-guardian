@@ -48,6 +48,35 @@ Require parameterised queries, safe ORM usage, allowlisted identifiers, strict i
 
 Never concatenate untrusted input into queries or system commands. Report the sink at file and line. Do not add exploit payloads to the repository.
 
+### SQL shapes that AI-generated code produces
+
+Generated queries usually look correct and return the right rows. The defect is that a value is joined into the SQL text instead of bound. Search for these shapes before reading anything else:
+
+| Shape | Examples to search for | Safe form |
+| --- | --- | --- |
+| String-built SQL | f-strings, `%` or `.format()` in Python; template literals or `+` in JavaScript; `fmt.Sprintf` in Go, when the string reaches `execute`, `query`, or `exec` | Fixed SQL text with placeholders, values passed as parameters |
+| ORM escape hatch with interpolation | Prisma `$queryRawUnsafe` or `$executeRawUnsafe`; Sequelize `query` with a template literal; Knex `raw` or `whereRaw` with `${}`; Drizzle `sql.raw`; TypeORM `query`; SQLAlchemy `text()` built with an f-string; Django `.raw()`, `.extra()`, `RawSQL`, or `cursor.execute` with `%` formatting | Tagged or bound forms: Prisma `$queryRaw` tagged template, `text()` with `:name` bind parameters, `.raw(sql, params)` |
+| Identifier from the request | `ORDER BY`, sort column, sort direction, table name, or column list read from query string or body | Map each choice to a fixed value owned by the application, for example a dictionary from `"newest"` to `created_at DESC`. Reject anything else. Placeholders cannot bind identifiers or `ASC`/`DESC` |
+| Dynamic SQL inside the database | PL/pgSQL `EXECUTE` built with `\|\|` or `format('%s', ...)`; stored procedures and Supabase RPC functions that assemble SQL from arguments | `EXECUTE ... USING` for values, `format()` with `%I` for identifiers and `%L` for literals, and a fixed list of allowed identifiers |
+| Second-order input | A stored value, a webhook payload, a file name, or model output later joined into SQL | Treat the value as untrusted at the point of use, not only at the HTTP boundary. Bind it there |
+| NoSQL operators | A request body passed straight into a MongoDB filter, so `{"$ne": null}` or `{"$gt": ""}` reaches the query | Validate types with a schema, cast to string or number, and reject keys that start with `$` |
+
+`LIKE` patterns are a separate issue. A bound value is safe from injection, but `%` and `_` in user input still widen a search. Escape them, or set a minimum query length, when the search covers private fields.
+
+Least privilege limits the damage when a shape is missed. The application's database account must not be an owner, a superuser, or the role that bypasses row security.
+
+### Verify an injection finding
+
+A shape found by reading code is static evidence. It supports a finding. It does not PASS or FAIL a critical control by itself.
+
+Runtime checks that need no exploit payload, against local or authorised staging only:
+
+1. Store a synthetic value that contains a single quote, a double quote, and a backslash, for example `O'Brien "test" \`. Read it back. It must round-trip unchanged, and the request must not return a 500 or a database error.
+2. Send a sort or column name that is not on the allowlist. The response must be a 4xx validation error, not a 500 and not a reordered result.
+3. Confirm error responses do not contain SQL text, table names, or driver messages.
+
+Record each command, the commit, and the observed status. A string-built query that the runtime checks cannot reach stays open as a suspected finding until it is fixed, because a later caller may reach it.
+
 ## Browser and HTTP security
 
 Review HTTPS enforcement, transport configuration, Content Security Policy, HSTS where appropriate, CORS, CSRF protection for the authentication mechanism in use, clickjacking protection, MIME sniffing protection, referrer policy, cookie attributes, caching of sensitive responses, open redirects, browser storage, and cross-origin communication.

@@ -40,6 +40,18 @@
       "agent_result": null
     },
     {
+      "id": "sql-string-built",
+      "fixture": "evals/fixtures/sql-string-built/search.ts",
+      "expected": "evals/expected-results/sql-string-built.json",
+      "agent_result": null
+    },
+    {
+      "id": "sql-bound",
+      "fixture": "evals/fixtures/sql-bound/search.ts",
+      "expected": "evals/expected-results/sql-bound.json",
+      "agent_result": null
+    },
+    {
       "id": "client-controlled-price",
       "fixture": "evals/fixtures/client-price/checkout.ts",
       "expected": "evals/expected-results/client-price.json",
