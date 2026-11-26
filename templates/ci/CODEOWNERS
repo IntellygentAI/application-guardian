@@ -1,0 +1,18 @@
+# Copy to .github/CODEOWNERS and replace @your-org/release-reviewers with
+# the people or team who approve releases. With "Require review from Code
+# Owners" turned on, a pull request that changes any of these paths cannot
+# merge without their approval. See docs/ci.md in the skill.
+
+# The workflow that runs the gate, and this file.
+/.github/workflows/ @your-org/release-reviewers
+/.github/CODEOWNERS @your-org/release-reviewers
+
+# The release gate and the rest of the skill.
+/.agents/skills/application-guardian/ @your-org/release-reviewers
+
+# The audit result. Accepted risks and their approvers live here.
+/docs/audits/audit-result.json @your-org/release-reviewers
+
+# Optional: the tests that prove the mandatory checks. Add the folders your
+# audit commands run, so a weakened test also needs release approval.
+# /tests/security/ @your-org/release-reviewers

@@ -24,6 +24,7 @@
     "exit_code": {"type": ["integer", "null"]},
     "expected": {"type": "string"},
     "observed": {"type": "string"},
-    "executed_at": {"type": "string"}
+    "executed_at": {"type": "string"},
+    "challenge": {"type": "string"}
   }
 }

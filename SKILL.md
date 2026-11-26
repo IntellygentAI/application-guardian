@@ -98,6 +98,7 @@ Read a reference before assessing that domain. Skip a conditional section when t
 | WCAG 2.2 AA | [references/accessibility.md](references/accessibility.md) |
 | Dependencies, cloud, rate limits, observability, performance, tests | [references/production-readiness.md](references/production-readiness.md) |
 | Evidence, freshness, and release calculation | [references/verification-protocol.md](references/verification-protocol.md) |
+| Challenging a finding before confirming it | [references/finding-verification.md](references/finding-verification.md) |
 | Threat-modelling method | [references/threat-modelling.md](references/threat-modelling.md) |
 | Mobile clients and service workers | [references/mobile-security.md](references/mobile-security.md) |
 | MCP, tools, and agent delegation | [references/agent-mcp-security.md](references/agent-mcp-security.md) |
@@ -156,11 +157,11 @@ Judge severity by impact, exploitability, data sensitivity, and exposure. Use CV
 | Low / P3 | Minor configuration weakness, limited information disclosure, non-critical reliability defect |
 | Informational | Maintainability, defence in depth, or operational readiness |
 
-Label each item confirmed or suspected. A suspected risk stays suspected until the behaviour is observed.
+Label each item confirmed or suspected. A suspected risk stays suspected until the behaviour is observed. Before confirming a finding, try to disprove it with [references/finding-verification.md](references/finding-verification.md): look for the guard that would stop it, check that the path is reachable, and test both the denied and the allowed case.
 
 ### 5. Record findings
 
-For every finding record: ID, title, severity, confidence, file and line, endpoint or component, description, root cause, preconditions, impact, expected behaviour, observed behaviour, safe reproduction using synthetic data, remediation, OWASP or CWE reference when known, regression test, and verification status.
+For every finding record: ID, title, severity, confidence, file and line, endpoint or component, description, root cause, preconditions, impact, expected behaviour, observed behaviour, safe reproduction using synthetic data, remediation, OWASP or CWE reference when known, regression test, verification status, and the challenge: how you tried to disprove it.
 
 Statuses are PASS, FAIL, NOT TESTED, BLOCKED, or NOT APPLICABLE. Follow [references/verification-protocol.md](references/verification-protocol.md). Static evidence and runtime evidence are different. A file and line can support a finding. A critical authorisation, tenant, payment, or database-policy check PASSes only with a command that was executed on the recorded commit. An unexecuted test is NOT TESTED. Evidence from an older commit is stale after a material change.
 
@@ -203,7 +204,7 @@ Do not make irreversible production changes automatically.
 
 ## Release decision
 
-When a release decision is requested, fill [templates/release-checklist.md](templates/release-checklist.md) and `docs/audits/audit-result.json`, then run the skill's `scripts/release_gate.py` with `--head` set to the current commit. Without `--head` the script reads HEAD from the repository that holds the audit file, and exits 2 when it cannot. The audit result lists every check in [schemas/mandatory-checks.json](schemas/mandatory-checks.json); every PASS records the command, exit code, observed result, and commit; every NOT APPLICABLE gives a justification; and every accepted risk names an owner and an approver. Commit the code before running the gate, because any uncommitted change other than the audit reports is NO-GO, and so is a working tree the gate cannot check. If the script cannot run in this environment, the decision is NO-GO and the reason is that the gate was not executed. The script's decision is the release decision:
+When a release decision is requested, fill [templates/release-checklist.md](templates/release-checklist.md) and `docs/audits/audit-result.json`, then run the skill's `scripts/release_gate.py` with `--head` set to the current commit. Without `--head` the script reads HEAD from the repository that holds the audit file, and exits 2 when it cannot. The audit result lists every check in [schemas/mandatory-checks.json](schemas/mandatory-checks.json); every PASS records the command, exit code, observed result, and commit; every NOT APPLICABLE gives a justification; and every accepted risk names an owner and an approver. Commit the code before running the gate, because any uncommitted change other than the audit reports is NO-GO, and so is a working tree the gate cannot check. If the script cannot run in this environment, the decision is NO-GO and the reason is that the gate was not executed. For a release, recommend running the gate in CI with `templates/ci/guardian-release.yml`, which re-runs every recorded command and passes only what CI saw pass. See [docs/ci.md](docs/ci.md). During an audit, propose the workflow; add it only in Fix and Verify, with approval. The script's decision is the release decision:
 
 - **GO**: Mandatory checks passed and no unresolved release-blocking finding remains.
 - **CONDITIONAL GO**: No unresolved critical or high-severity security finding remains, and documented lower-priority risks are explicitly accepted.
