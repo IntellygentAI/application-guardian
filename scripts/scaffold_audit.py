@@ -10,6 +10,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -23,16 +24,24 @@ COPIES = {
     "release-checklist.md": "production-readiness.md",
 }
 
-AUDIT_JSON = """{
-  "schema_version": "1.0",
-  "commit": "REPLACE_WITH_GIT_COMMIT",
-  "environment": "local",
-  "executed_at": "REPLACE_WITH_TIMESTAMP",
-  "findings": [],
-  "mandatory_checks": [],
-  "accepted_risks": []
-}
-"""
+
+def audit_json() -> str:
+    """Start every mandatory check as NOT TESTED, so none can be left out."""
+    inventory = json.loads((ROOT / "schemas" / "mandatory-checks.json").read_text(encoding="utf-8"))
+    document = {
+        "schema_version": "1.1",
+        "commit": "REPLACE_WITH_GIT_COMMIT",
+        "environment": "local",
+        "executed_at": "REPLACE_WITH_TIMESTAMP",
+        "findings": [],
+        "mandatory_checks": [
+            {"id": item["id"], "status": "NOT TESTED", "critical": item["critical"], "evidence_type": "none"}
+            for item in inventory["checks"]
+        ],
+        "accepted_risks": [],
+    }
+    return json.dumps(document, indent=2) + "\n"
+
 
 FINDINGS = """# Security findings
 
@@ -82,7 +91,7 @@ def scaffold(out: Path) -> int:
     for name, body in (
         ("security-findings.md", FINDINGS),
         ("remediation-plan.md", REMEDIATION),
-        ("audit-result.json", AUDIT_JSON),
+        ("audit-result.json", audit_json()),
     ):
         dest = out / name
         if dest.exists():
