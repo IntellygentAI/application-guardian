@@ -290,6 +290,62 @@ class ReleaseGateTests(unittest.TestCase):
         self.assertEqual(untracked.returncode, 1)
         self.assertIn("new_route.py", untracked.stdout)
 
+    def committed_repo(self, tmp, audit_folder):
+        """A repository with app code and a passing audit at HEAD."""
+        repo = Path(tmp)
+        subprocess.run(["git", "init", "-q", tmp], check=True)
+        folder = repo / audit_folder
+        folder.mkdir(parents=True, exist_ok=True)
+        (repo / "src").mkdir(exist_ok=True)
+        (repo / "src" / "app.py").write_text("print('v1')\n", encoding="utf-8")
+        path = folder / "audit-result.json"
+        path.write_text("{}", encoding="utf-8")
+        git(repo, "add", "-A")
+        git(repo, "commit", "-q", "-m", "app")
+        head = head_of(repo)
+        path.write_text(json.dumps(document(commit=head, mandatory_checks=all_checks(head))), encoding="utf-8")
+        return repo, path
+
+    def test_cli_audit_file_beside_code_does_not_hide_code_changes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path = self.committed_repo(tmp, "src")
+            clean = run_gate(path)
+            (repo / "src" / "app.py").write_text("print('v2')\n", encoding="utf-8")
+            dirty = run_gate(path)
+        self.assertEqual(clean.returncode, 0, clean.stdout + clean.stderr)
+        self.assertEqual(dirty.returncode, 1)
+        self.assertIn("src/app.py", dirty.stdout)
+
+    def test_cli_non_report_file_in_audit_folder_counts_as_a_change(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path = self.committed_repo(tmp, "docs/audits")
+            (repo / "docs" / "audits" / "security-findings.md").write_text("findings", encoding="utf-8")
+            reports_only = run_gate(path)
+            (repo / "docs" / "audits" / "patch.py").write_text("code", encoding="utf-8")
+            extra = run_gate(path)
+        self.assertEqual(reports_only.returncode, 0, reports_only.stdout + reports_only.stderr)
+        self.assertEqual(extra.returncode, 1)
+        self.assertIn("docs/audits/patch.py", extra.stdout)
+
+    def test_cli_failed_git_status_is_no_go(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path = self.committed_repo(tmp, "docs/audits")
+            (repo / ".git" / "index").write_bytes(b"not an index")
+            completed = run_gate(path)
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn("Could not confirm that the working tree", completed.stdout)
+
+    def test_cli_outside_git_with_head_is_no_go(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "audit-result.json"
+            path.write_text(json.dumps(document(commit=COMMIT, mandatory_checks=all_checks(COMMIT))), encoding="utf-8")
+            completed = run_gate(path, "--head", COMMIT)
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn("Could not confirm that the working tree", completed.stdout)
+
+    def test_unverified_worktree_blocks_release(self):
+        self.assertEqual(decision(document(), worktree_verified=False), "NO-GO")
+
     # Command line and HEAD
 
     def test_cli_without_head_outside_git_exits_2(self):
