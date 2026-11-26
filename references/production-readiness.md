@@ -20,6 +20,8 @@ Preview and staging must not expose production data or production credentials. A
 
 If the deployment config is not in the repository, record those checks as NOT TESTED and name the missing artefact.
 
+More than one instance requires a session store outside the process. In-memory logins and sticky sessions are the failure mode in [security-testing.md](security-testing.md).
+
 ## Rate limiting and abuse resilience
 
 Identify expensive operations: login, registration, password reset, OTP verification, search, upload, report generation, email, SMS, AI generation, export, and payment initiation.

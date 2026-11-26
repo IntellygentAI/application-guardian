@@ -97,9 +97,33 @@ Prove the controls with a local mock destination. Do not target internal network
 - Default accounts, default passwords, and permissive configuration files are findings when they ship in the product.
 - A new table, bucket, or route is private until an explicit rule makes it public.
 
+## Sessions and stateless tokens
+
+A session and a signed token do not fail the same way. [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html) describes a server-side session: the browser holds a random identifier, and the server stores that identifier. Each request looks it up. Deleting the server record ends the session on the next request.
+
+A [JWT](https://www.rfc-editor.org/rfc/rfc7519) is a signed set of claims, including who the subject is and when the token expires. [OWASP's JWT guidance](https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html) warns that a JWT used as a session still needs an invalidation plan. Checking only the signature and `exp` does not consult the database. Deleting the user, or asking that person to log out, leaves every already issued token valid until `exp`. A copy on a laptop cannot be taken back.
+
+Test it with synthetic accounts. Sign in, capture the access token, suspend or delete the account, then call a privileged or private endpoint with that same token.
+
+- If the server still accepts the token, record how long `exp` allows. An access token that lives for days, and is never checked against a revocation record, is a high finding for an admin portal or any route that reads another person's data.
+- A short access token plus a refresh token stored on the server is the ordinary fix. [RFC 6749](https://www.rfc-editor.org/rfc/rfc6749) defines the refresh token as the credential that obtains a new access token. [RFC 9700](https://www.rfc-editor.org/rfc/rfc9700) says refresh tokens are what make short-lived access tokens practical, and that the authorization server revokes them on a security event. Deleting or revoking the refresh token stops new access tokens. The current access token still works until `exp`. Record that window. Minutes are the expected scale. Days are a finding.
+- When the product promises immediate logout, or the route is administrative, payment, or cross-user, signature and `exp` are not enough. The server also rejects a revoked token. A deny list is keyed by `jti` and `iss`, not by a hash of the raw token. OWASP documents that a hash of the whole JWT can be bypassed because some signed tokens stay valid after a non-semantic change. A server-side session, or a session version stored in the database and copied into the token, is the other acceptable check.
+- Logout, password change, suspension, account deletion, and removal from an organisation revoke every refresh token for that user, on every device. One device logging out does not have to kill the others unless the control is "log out everywhere".
+- [RFC 9700](https://www.rfc-editor.org/rfc/rfc9700) recommends refresh-token rotation: each refresh invalidates the previous refresh token, and presenting a used one revokes the rest of that grant.
+
+Two copies of the same app do not share a login that lives in one process. The [Twelve-Factor processes](https://12factor.net/processes) rule is that a process is stateless and share-nothing: session data sits in a backing store with a timeout, such as Redis or Memcached, and sticky sessions are not that store. The Express session middleware says the same about its default [`MemoryStore`](https://expressjs.com/en/resources/middleware/session.html): it does not scale past a single process and is for development. A load balancer that sends the next click to the other process then has nothing to look up, and the user is sent back to login.
+
+Pinning a browser to one process, sticky sessions, keeps the demo working. When that process crashes or is replaced on deploy, every user pinned to it is logged out. Treat affinity as a residual risk, not as the session store.
+
+The word "stateless" here describes the app process. The login still exists, in one place both processes read. A signed access token also lets any process accept the request without that place, and it brings back the revocation limit above. Do not replace an in-memory session with a long-lived JWT to survive a second server.
+
+When production runs more than one instance, or the session store is process memory and the deploy can start a second instance, sign in through one process and send the same cookie to the other. A redirect to login is a finding. If the deploy config is absent, record NOT TESTED and name the missing replica count. One local process does not prove the shared store.
+
+The mandatory check is `session-invalidation`. Access after deletion is also an authentication test above.
+
 ## Tokens, MFA, and passkeys
 
-- JWTs are verified for signature, issuer, audience, and expiry. The `none` algorithm and a client-supplied algorithm are rejected.
+- JWTs are verified for signature, issuer, audience, and expiry. The `none` algorithm and a client-supplied algorithm are rejected. Verification without a revocation check is not logout.
 - A token in local storage is called out when the product also has a safer cookie option. Do not treat storage choice as the only control.
 - MFA and passkey enrolment, recovery, and factor removal require a fresh authentication. Removing the last factor does not leave a weaker path that skips MFA.
 - Recovery codes are single use and are stored as hashes.
