@@ -1,0 +1,202 @@
+{
+ "summary": {
+  "baseline": {
+   "runs": 3,
+   "checks": {
+    "no_false_positive": [
+     12,
+     12
+    ],
+    "decision": [
+     18,
+     18
+    ],
+    "detected": [
+     21,
+     21
+    ],
+    "severity_within_one": [
+     21,
+     21
+    ]
+   },
+   "by_case": {
+    "secure-tagged-sql": [
+     3,
+     3
+    ],
+    "missing-check": [
+     3,
+     3
+    ],
+    "tenant-from-header": [
+     6,
+     6
+    ],
+    "secure-rls-policies": [
+     3,
+     3
+    ],
+    "valid-conditional": [
+     3,
+     3
+    ],
+    "middleware-gap": [
+     6,
+     6
+    ],
+    "secure-paid-webhook": [
+     3,
+     3
+    ],
+    "unpaid-checkout-entitlement": [
+     6,
+     6
+    ],
+    "prefix-allowlist-fetch": [
+     6,
+     6
+    ],
+    "accepted-high": [
+     3,
+     3
+    ],
+    "stale-ownership": [
+     3,
+     3
+    ],
+    "security-definer-rpc": [
+     6,
+     6
+    ],
+    "commands-test-nothing": [
+     3,
+     3
+    ],
+    "negative-transfer": [
+     6,
+     6
+    ],
+    "static-critical": [
+     3,
+     3
+    ],
+    "secure-scoped-invoice": [
+     3,
+     3
+    ],
+    "price-overwritten": [
+     6,
+     6
+    ]
+   },
+   "total": [
+    72,
+    72
+   ]
+  },
+  "skill": {
+   "runs": 3,
+   "checks": {
+    "no_false_positive": [
+     12,
+     12
+    ],
+    "decision": [
+     18,
+     18
+    ],
+    "detected": [
+     21,
+     21
+    ],
+    "severity_within_one": [
+     21,
+     21
+    ]
+   },
+   "by_case": {
+    "secure-tagged-sql": [
+     3,
+     3
+    ],
+    "missing-check": [
+     3,
+     3
+    ],
+    "tenant-from-header": [
+     6,
+     6
+    ],
+    "secure-rls-policies": [
+     3,
+     3
+    ],
+    "valid-conditional": [
+     3,
+     3
+    ],
+    "middleware-gap": [
+     6,
+     6
+    ],
+    "secure-paid-webhook": [
+     3,
+     3
+    ],
+    "unpaid-checkout-entitlement": [
+     6,
+     6
+    ],
+    "prefix-allowlist-fetch": [
+     6,
+     6
+    ],
+    "accepted-high": [
+     3,
+     3
+    ],
+    "stale-ownership": [
+     3,
+     3
+    ],
+    "security-definer-rpc": [
+     6,
+     6
+    ],
+    "commands-test-nothing": [
+     3,
+     3
+    ],
+    "negative-transfer": [
+     6,
+     6
+    ],
+    "static-critical": [
+     3,
+     3
+    ],
+    "secure-scoped-invoice": [
+     3,
+     3
+    ],
+    "price-overwritten": [
+     6,
+     6
+    ]
+   },
+   "total": [
+    72,
+    72
+   ]
+  }
+ },
+ "misses": {
+  "baseline-1": [],
+  "baseline-2": [],
+  "baseline-3": [],
+  "skill-1": [],
+  "skill-2": [],
+  "skill-3": []
+ }
+}
