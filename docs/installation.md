@@ -30,7 +30,7 @@ Other agents that load a `SKILL.md` directory can use the same folder. See [comp
 
 ## Skills CLI
 
-The Vercel Skills CLI convention for this repository is:
+Install with the Skills CLI:
 
 ```bash
 npx skills add IntellygentAI/application-guardian
@@ -42,7 +42,7 @@ Global install:
 npx skills add IntellygentAI/application-guardian -g
 ```
 
-These commands were not executed against this repository. Do not treat them as a verified installation method until that run succeeds. The manual copy above remains the fallback.
+The project install was run against this repository on 2026-11-26: it placed the skill in `.agents/skills/application-guardian`, linked `.claude/skills/application-guardian`, and wrote `skills-lock.json`. The global install (`-g`) was not run. The manual copy above remains the fallback. See [compatibility.md](compatibility.md) for what each agent row means.
 
 ## Scripts
 
