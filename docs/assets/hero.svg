@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="320" viewBox="0 0 960 320" role="img" aria-labelledby="t d">
+  <title id="t">Application Guardian</title>
+  <desc id="d">Security and production-readiness skill for AI-built apps. Cycles through attacker actions and the result the skill requires.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0a0f1e"/>
+      <stop offset="1" stop-color="#111c33"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="1" stop-color="#0ea5e9"/>
+    </linearGradient>
+    <linearGradient id="scan" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#34d399" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#34d399" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#34d399" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#1e2a44" stroke-width="1"/>
+    </pattern>
+    <clipPath id="card"><rect width="960" height="320" rx="18"/></clipPath>
+  </defs>
+  <style>
+    .title { font: 700 44px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #f8fafc; }
+    .sub { font: 400 18px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; fill: #94a3b8; }
+    .label { font: 600 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: 1.5px; }
+    .mono { font: 500 16px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .atk { fill: #fca5a5; }
+    .ok { fill: #6ee7b7; }
+    .ring { transform-origin: 140px 158px; animation: pulse 3s ease-out infinite; }
+    .check { stroke-dasharray: 90; stroke-dashoffset: 90; animation: draw 6s ease-in-out infinite; }
+    .scanbar { animation: sweep 5s linear infinite; }
+    .row { opacity: 0; animation: cycle 15s infinite both; }
+    .r2 { animation-delay: 2.5s; } .r3 { animation-delay: 5s; } .r4 { animation-delay: 7.5s; }
+    .r5 { animation-delay: 10s; } .r6 { animation-delay: 12.5s; }
+    .cursor { animation: blink 1s steps(1) infinite; }
+    @keyframes pulse { 0% { transform: scale(0.85); opacity: 0.55; } 100% { transform: scale(1.35); opacity: 0; } }
+    @keyframes draw { 0%, 10% { stroke-dashoffset: 90; } 35%, 85% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 90; } }
+    @keyframes sweep { 0% { transform: translateX(-260px); } 100% { transform: translateX(980px); } }
+    @keyframes cycle { 0% { opacity: 0; } 2% { opacity: 1; } 15% { opacity: 1; } 16.6% { opacity: 0; } 100% { opacity: 0; } }
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .ring, .scanbar, .cursor { animation: none; }
+      .check { animation: none; stroke-dashoffset: 0; }
+      .row { animation: none; opacity: 0; }
+      .r1 { opacity: 1; }
+    }
+  </style>
+
+  <g clip-path="url(#card)">
+    <rect width="960" height="320" fill="url(#bg)"/>
+    <rect width="960" height="320" fill="url(#grid)" opacity="0.6"/>
+    <rect class="scanbar" x="0" y="0" width="260" height="320" fill="url(#scan)"/>
+  </g>
+  <rect x="0.5" y="0.5" width="959" height="319" rx="18" fill="none" stroke="#1f2b47"/>
+
+  <!-- Shield -->
+  <circle class="ring" cx="140" cy="158" r="78" fill="none" stroke="#34d399" stroke-width="2"/>
+  <path d="M140 82 L202 106 V156 C202 196 176 224 140 238 C104 224 78 196 78 156 V106 Z"
+        fill="#0b1324" stroke="url(#shield)" stroke-width="5" stroke-linejoin="round"/>
+  <path class="check" d="M110 160 L132 182 L174 136" fill="none" stroke="#34d399" stroke-width="9"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Heading -->
+  <text class="title" x="250" y="104">Application Guardian</text>
+  <text class="sub" x="252" y="136">Security and production-readiness skill for AI-built apps</text>
+
+  <!-- Scenario panel -->
+  <rect x="250" y="164" width="672" height="112" rx="12" fill="#0b1324" stroke="#1f2b47"/>
+  <text class="label" x="272" y="190" fill="#f87171">ATTACKER TRIES</text>
+  <text class="label" x="612" y="190" fill="#34d399">GUARDIAN REQUIRES</text>
+  <line x1="590" y1="178" x2="590" y2="262" stroke="#1f2b47"/>
+
+  <g class="row r1"><text class="mono atk" x="272" y="236">Change the ID in the URL</text><text class="mono ok" x="612" y="236">403, owner checked on server</text></g>
+  <g class="row r2"><text class="mono atk" x="272" y="236">Edit the price at checkout</text><text class="mono ok" x="612" y="236">Price read from the server</text></g>
+  <g class="row r3"><text class="mono atk" x="272" y="236">Open /success without paying</text><text class="mono ok" x="612" y="236">No verified webhook, no access</text></g>
+  <g class="row r4"><text class="mono atk" x="272" y="236">Read tables with public key</text><text class="mono ok" x="612" y="236">RLS denies anon and others</text></g>
+  <g class="row r5"><text class="mono atk" x="272" y="236">Redeem a coupon 100 times</text><text class="mono ok" x="612" y="236">Exactly one redemption</text></g>
+  <g class="row r6"><text class="mono atk" x="272" y="236">"Ignore your instructions"</text><text class="mono ok" x="612" y="236">Tools still check permissions</text></g>
+  <rect class="cursor" x="900" y="222" width="9" height="18" fill="#34d399"/>
+</svg>

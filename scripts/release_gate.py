@@ -58,7 +58,9 @@ def main() -> int:
     if not isinstance(document, dict):
         print("Audit file must contain a JSON object.", file=sys.stderr)
         return 2
-    if args.head and not document.get("head_commit"):
+    if args.head:
+        # The commit given on the command line is the real HEAD. It replaces any
+        # head_commit written into the file, so a report cannot vouch for itself.
         document["head_commit"] = args.head
     return evaluate(document, args.strict)
 

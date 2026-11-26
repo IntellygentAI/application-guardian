@@ -1,6 +1,20 @@
+<div align="center">
+
+<img src="docs/assets/hero.svg" alt="Application Guardian: an animated banner showing attacker actions such as changing the ID in a URL, and the result the skill requires, such as a 403 with ownership checked on the server" width="100%">
+
 # Application Guardian
 
-The production-readiness and security guardian for AI-built applications.
+**The production-readiness and security guardian for AI-built applications.**
+
+[![validate](https://github.com/IntellygentAI/application-guardian/actions/workflows/validate.yml/badge.svg)](https://github.com/IntellygentAI/application-guardian/actions/workflows/validate.yml)
+[![tests](https://github.com/IntellygentAI/application-guardian/actions/workflows/tests.yml/badge.svg)](https://github.com/IntellygentAI/application-guardian/actions/workflows/tests.yml)
+[![version](https://img.shields.io/badge/version-0.4.0-34d399)](CHANGELOG.md)
+[![Agent Skills](https://img.shields.io/badge/format-Agent%20Skills-0ea5e9)](https://agentskills.io/specification)
+[![license](https://img.shields.io/badge/license-MIT-64748b)](LICENSE)
+
+[Install](#install) · [Use it](#use-it) · [Release gate](#what-an-audit-produces) · [Roadmap](docs/roadmap/v0.5-upgrade-prompt.md) · [Contributing](#contributing)
+
+</div>
 
 A skill for testing, security, privacy, and production readiness. It tells an agent to review an application the way a QA engineer, an application-security engineer, a database-security reviewer, and a site-reliability engineer would. A successful build, a polished screen, or a happy-path test is not evidence that the application is safe to ship.
 
@@ -126,6 +140,8 @@ Create the empty files from the templates:
 python path/to/application-guardian/scripts/scaffold_audit.py --out docs/audits
 python path/to/application-guardian/scripts/release_gate.py docs/audits/audit-result.json --head "$(git rev-parse HEAD)"
 ```
+
+<img src="docs/assets/release-gate.svg" alt="Animated terminal: release_gate.py on the sample audit prints NO-GO with three reasons and exits 1" width="100%">
 
 The scaffold script does not overwrite a file that already exists. `release_gate.py` calculates GO, CONDITIONAL GO, or NO-GO from `audit-result.json`. A GO written only in Markdown is not the decision. Exit 0 means GO or CONDITIONAL GO. Exit 1 means NO-GO.
 
