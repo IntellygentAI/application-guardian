@@ -32,6 +32,8 @@ def evaluate(
     equivalent_commits: set[str] | None = None,
     ci_evidence: dict | None = None,
     ci_expected: dict[str, str] | None = None,
+    extra_runners: frozenset[str] | set[str] = frozenset(),
+    extra_reasons: list[str] | None = None,
 ) -> int:
     errors = validate_audit(document)
     if errors:
@@ -46,6 +48,8 @@ def evaluate(
         equivalent_commits=equivalent_commits,
         ci_evidence=ci_evidence,
         ci_expected=ci_expected,
+        extra_runners=extra_runners,
+        extra_reasons=extra_reasons,
     )
     decision = result["release_decision"]
     print(decision)
@@ -76,6 +80,12 @@ def main() -> int:
         type=Path,
         help="Evidence file from ci_evidence.py. Every runtime PASS must have a passing CI run of its command.",
     )
+    parser.add_argument(
+        "--allow-runner",
+        action="append",
+        default=[],
+        help="Accept another test runner name in critical check commands. Pass it to ci_evidence.py with --allow too.",
+    )
     args = parser.parse_args()
     if not args.audit_json.is_file():
         print(f"Audit file not found: {args.audit_json}", file=sys.stderr)
@@ -90,7 +100,13 @@ def main() -> int:
         print("Audit file must contain a JSON object.", file=sys.stderr)
         return 2
     audit_path = args.audit_json.resolve()
-    head = args.head or current_commit(audit_path.parent)
+    actual = current_commit(audit_path.parent)
+    head = args.head or actual
+    extra_reasons = []
+    if args.head and actual and not actual.startswith(args.head):
+        extra_reasons.append(
+            f"--head {args.head} is not the repository's HEAD ({actual}). The gate decides for the commit that is checked out."
+        )
     if not head:
         print(
             "Cannot read the current commit. Pass --head, or run inside the application's Git repository.",
@@ -111,6 +127,8 @@ def main() -> int:
         ci_expected = {
             "audit_sha256": hashlib.sha256(raw).hexdigest(),
             "run_id": os.environ.get("GITHUB_RUN_ID", ""),
+            "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT", ""),
+            "repository": os.environ.get("GITHUB_REPOSITORY", ""),
         }
     changes = uncommitted_changes(audit_path)
     return evaluate(
@@ -121,20 +139,25 @@ def main() -> int:
         equivalent_commits=equivalent_commits(audit_path, head, document),
         ci_evidence=ci_evidence,
         ci_expected=ci_expected,
+        extra_runners=frozenset(args.allow_runner),
+        extra_reasons=extra_reasons,
     )
 
 
 def git(directory: Path, *arguments: str) -> subprocess.CompletedProcess | None:
+    """Run git and decode its output, keeping any byte that is not valid UTF-8."""
     try:
-        return subprocess.run(
+        completed = subprocess.run(
             ["git", "-C", str(directory), *arguments],
             capture_output=True,
-            text=True,
             check=False,
-            timeout=10,
+            timeout=30,
         )
     except (OSError, subprocess.SubprocessError):
         return None
+    completed.stdout = completed.stdout.decode("utf-8", "surrogateescape")
+    completed.stderr = completed.stderr.decode("utf-8", "surrogateescape")
+    return completed
 
 
 def current_commit(directory: Path) -> str:
@@ -159,6 +182,11 @@ REPORT_FILES = frozenset(
 
 
 COMMIT_ID = re.compile(r"[0-9a-f]{7,64}")
+
+
+def _shown(path: str) -> str:
+    """A path as text that can always be printed, with bad bytes escaped."""
+    return path.encode("utf-8", "surrogateescape").decode("utf-8", "backslashreplace")
 
 
 def _is_report(path: str, relative_file: str, audit_dir: str) -> bool:
@@ -206,10 +234,16 @@ def equivalent_commits(audit_path: Path, head: str, document: dict) -> set[str]:
     for commit in recorded:
         if not COMMIT_ID.fullmatch(commit):
             continue
-        ancestor = git(root, "merge-base", "--is-ancestor", f"{commit}^{{commit}}", head)
+        # The ID must name that commit: a tag called "deadbee" resolves to a
+        # different commit, whose ID does not start with "deadbee".
+        resolved = git(root, "rev-parse", "--verify", "--quiet", f"{commit}^{{commit}}")
+        if not resolved or resolved.returncode != 0 or not resolved.stdout.strip().startswith(commit):
+            continue
+        full = resolved.stdout.strip()
+        ancestor = git(root, "merge-base", "--is-ancestor", full, head)
         if not ancestor or ancestor.returncode != 0:
             continue
-        diff = git(root, "diff", "--name-only", "--no-renames", "-z", commit, head, "--")
+        diff = git(root, "diff", "--name-only", "--no-renames", "--ignore-submodules=none", "-z", full, head, "--")
         if not diff or diff.returncode != 0:
             continue
         paths = [path for path in diff.stdout.split("\0") if path]
@@ -234,23 +268,27 @@ def uncommitted_changes(audit_path: Path) -> list[str] | None:
     if location is None:
         return None
     root, relative_file, audit_dir = location
-    status = git(root, "status", "--porcelain=v1", "-z", "--untracked-files=all")
+    status = git(
+        root, "status", "--porcelain=v1", "-z", "--untracked-files=all", "--no-renames", "--ignore-submodules=none"
+    )
     if not status or status.returncode != 0:
         return None
     changed: list[str] = []
-    entries = status.stdout.split("\0")
-    index = 0
-    while index < len(entries):
-        entry = entries[index]
-        index += 1
+    # Without rename detection, a file moved to a report name shows as a
+    # deletion and an addition, so the deleted code still counts.
+    for entry in status.stdout.split("\0"):
         if len(entry) < 4:
             continue
-        code, path = entry[:2], entry[3:]
-        if code[0] in "RC":
-            index += 1  # the next entry is the rename source
-        if _is_report(path, relative_file, audit_dir):
-            continue
-        changed.append(path)
+        path = entry[3:]
+        if not _is_report(path, relative_file, audit_dir):
+            changed.append(_shown(path))
+    # Files marked skip-worktree or assume-unchanged are hidden from git status.
+    flags = git(root, "ls-files", "-v", "-z")
+    if not flags or flags.returncode != 0:
+        return None
+    for entry in flags.stdout.split("\0"):
+        if len(entry) > 2 and (entry[0] == "S" or entry[0].islower()):
+            changed.append(f"{_shown(entry[2:])} (hidden from git status by skip-worktree or assume-unchanged)")
     return changed
 
 

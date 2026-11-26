@@ -7,6 +7,8 @@ report does not override this result.
 from __future__ import annotations
 
 import json
+import shlex
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +24,58 @@ CONDITIONAL = "CONDITIONAL GO"
 NO_GO = "NO-GO"
 
 INVENTORY_PATH = Path(__file__).resolve().parent.parent / "schemas" / "mandatory-checks.json"
+
+# Programs that run tests. A critical check or a fixed critical or high finding
+# must name one of these as its command, so "true" or "echo passed" cannot
+# stand in for a test. ci_evidence.py refuses anything else in CI.
+TEST_RUNNERS = frozenset(
+    {
+        "bun", "bundle", "cargo", "deno", "dotnet", "go", "gradle", "gradlew", "jest", "make", "mvn",
+        "node", "npm", "npx", "php", "phpunit", "playwright", "pnpm", "pytest", "python", "python3",
+        "rake", "rspec", "vitest", "yarn",
+    }
+)
+
+
+# Flags that make a runner execute code given on the command line instead of
+# a test file, so "python -c pass" cannot prove a control.
+INLINE_CODE = {
+    "python": {"-c"},
+    "python3": {"-c"},
+    "node": {"-e", "--eval", "-p", "--print"},
+    "bun": {"-e", "--eval"},
+    "deno": {"eval"},
+    "npx": {"-c", "--call"},
+}
+
+
+def test_command_problem(command: str, runners: frozenset[str] | set[str]) -> str:
+    """Return why a command cannot prove a control, or '' when it can."""
+    name = runner_name(command)
+    if name not in runners:
+        return "is not a test runner"
+    try:
+        argv = shlex.split(command)
+    except ValueError:
+        return "cannot be parsed"
+    if INLINE_CODE.get(name, set()) & set(argv[1:]):
+        return "runs inline code instead of a test file"
+    return ""
+
+
+def runner_name(command: str) -> str:
+    """Return the program a command starts, without its path or a Windows suffix."""
+    try:
+        argv = shlex.split(command)
+    except ValueError:
+        return ""
+    if not argv:
+        return ""
+    name = Path(argv[0]).name
+    for suffix in (".exe", ".cmd", ".bat"):
+        if name.lower().endswith(suffix):
+            name = name[: -len(suffix)]
+    return name
 
 
 def load_inventory(path: Path = INVENTORY_PATH) -> list[dict[str, Any]]:
@@ -41,7 +95,7 @@ def _missing_execution(item: dict[str, Any], reference: str, current: set[str] |
         missing.append(f"commit {reference}")
     if not _text(item, "command"):
         missing.append("command")
-    if item.get("exit_code") != 0:
+    if type(item.get("exit_code")) is not int or item.get("exit_code") != 0:
         missing.append("exit code 0")
     if not _text(item, "observed"):
         missing.append("observed result")
@@ -58,6 +112,8 @@ def decide(
     equivalent_commits: set[str] | None = None,
     ci_evidence: dict[str, Any] | None = None,
     ci_expected: dict[str, str] | None = None,
+    extra_runners: frozenset[str] | set[str] = frozenset(),
+    extra_reasons: list[str] | None = None,
 ) -> dict[str, Any]:
     """Return a decision, the reasons, and whether release is allowed.
 
@@ -69,9 +125,11 @@ def decide(
     recorded on them is current. ci_evidence is the file written by
     ci_evidence.py; when given, every runtime PASS and every fixed critical or
     high finding needs a matching passing run in it. ci_expected holds the
-    values the evidence must match: audit_sha256 and run_id.
+    values the evidence must match: audit_sha256, run_id, run_attempt, and
+    repository. extra_runners adds programs to TEST_RUNNERS.
     """
-    reasons: list[str] = []
+    runners = TEST_RUNNERS | set(extra_runners)
+    reasons: list[str] = list(extra_reasons or [])
     findings = document.get("findings") or []
     checks = document.get("mandatory_checks") or []
     inventory = load_inventory() if inventory is None else inventory
@@ -133,6 +191,17 @@ def decide(
                     f"{finding_id} is a {severity} finding marked fixed, but its verification lacks "
                     f"{', '.join(missing)}."
                 )
+            elif problem := test_command_problem(_text(finding, "command"), runners):
+                reasons.append(
+                    f"{finding_id} is a {severity} finding marked fixed by the command "
+                    f"'{_text(finding, 'command')}', which {problem}."
+                )
+            continue
+        if status == "false_positive" and severity in BLOCKING_SEVERITIES and not _text(finding, "challenge"):
+            reasons.append(
+                f"{finding_id} is a {severity} finding closed as a false positive without a recorded challenge. "
+                "Say which guard stops it and how that was tested."
+            )
             continue
         if status in {"fixed", "false_positive"}:
             continue
@@ -177,6 +246,7 @@ def decide(
     required_critical = {item["id"] for item in inventory if item.get("critical")}
 
     passed = 0
+    critical_tested = 0
     for check in checks:
         status = _text(check, "status")
         check_id = _text(check, "id") or "unknown"
@@ -204,6 +274,15 @@ def decide(
                 if missing:
                     reasons.append(f"{check_id} passed without a recorded run: missing {', '.join(missing)}.")
                     continue
+                problem = test_command_problem(_text(check, "command"), runners)
+                if critical and problem:
+                    reasons.append(
+                        f"{check_id} is a critical check that passed with the command '{_text(check, 'command')}', "
+                        f"which {problem}."
+                    )
+                    continue
+                if critical:
+                    critical_tested += 1
             elif not _text(check, "observed"):
                 reasons.append(f"{check_id} passed on static evidence but does not say what was observed.")
                 continue
@@ -212,6 +291,11 @@ def decide(
         if status == "NOT APPLICABLE":
             if not _text(check, "justification"):
                 reasons.append(f"{check_id} is NOT APPLICABLE without a justification.")
+            elif critical and not _text(check, "approved_by"):
+                reasons.append(
+                    f"{check_id} is a critical check marked NOT APPLICABLE without approved_by. "
+                    "A named reviewer must confirm that the control does not apply."
+                )
             continue
         if status == "FAIL":
             reasons.append(f"{check_id} failed.")
@@ -220,6 +304,17 @@ def decide(
 
     if checks and passed == 0:
         reasons.append("No mandatory check has a PASS result.")
+    elif checks and critical_tested == 0:
+        reasons.append(
+            "No critical check passed with an executed test. Every application has at least one critical "
+            "control that applies, such as authentication or secrets."
+        )
+
+    today = datetime.now(timezone.utc).date().isoformat()
+    for risk_id, risk in sorted(risks.items()):
+        expires = _text(risk, "expires_at")
+        if expires and expires[:10] < today:
+            reasons.append(f"Accepted risk {risk_id} expired on {expires[:10]}. Review it again or fix it.")
 
     if ci_evidence is not None:
         reasons.extend(ci_reasons(document, ci_evidence, reference, ci_expected or {}))
@@ -268,11 +363,19 @@ def ci_reasons(
     if not isinstance(evidence, dict) or evidence.get("schema_version") != CI_SCHEMA_VERSION:
         return [f"CI evidence is not a version {CI_SCHEMA_VERSION} evidence file."]
     reasons = []
+    if not expected.get("run_id"):
+        reasons.append("GITHUB_RUN_ID is not set, so the CI evidence cannot be tied to this workflow run.")
     if _text(evidence, "commit") != head:
         reasons.append(f"CI evidence was produced at {_text(evidence, 'commit') or 'no commit'}, not at {head}.")
     run_id = expected.get("run_id")
     if run_id and _text(evidence, "run_id") != run_id:
         reasons.append("CI evidence comes from a different workflow run. It must be produced in this run.")
+    attempt = expected.get("run_attempt")
+    if attempt and _text(evidence, "run_attempt") != attempt:
+        reasons.append("CI evidence comes from a different attempt of this workflow run.")
+    repository = expected.get("repository")
+    if repository and _text(evidence, "repository") != repository:
+        reasons.append(f"CI evidence was produced for {_text(evidence, 'repository') or 'no repository'}, not {repository}.")
     audit_hash = expected.get("audit_sha256")
     if audit_hash and _text(evidence, "audit_sha256") != audit_hash:
         reasons.append("The audit file changed after CI ran the recorded commands.")
@@ -280,6 +383,8 @@ def ci_reasons(
     for run in evidence.get("runs") or []:
         if isinstance(run, dict):
             for item_id in run.get("ids") or []:
+                if str(item_id) in by_id:
+                    reasons.append(f"{item_id} appears in more than one CI run.")
                 by_id[str(item_id)] = run
     for item_id, command in recorded_runs(document):
         run = by_id.get(item_id)
@@ -291,6 +396,6 @@ def ci_reasons(
             reasons.append(f"{item_id}: CI refused to run the command: {_text(run, 'rejected')}.")
         elif run.get("timed_out"):
             reasons.append(f"{item_id}: the command timed out in CI.")
-        elif run.get("exit_code") != 0:
+        elif type(run.get("exit_code")) is not int or run.get("exit_code") != 0:
             reasons.append(f"{item_id}: the command exited {run.get('exit_code')} in CI.")
     return reasons

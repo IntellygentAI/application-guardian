@@ -2,7 +2,9 @@
 """Detect a repository's stack and name the references an audit should read.
 
 The detector looks at file names and dependency manifests. It does not install
-packages and it does not execute the target application.
+packages and it does not execute the target application. The repository is
+untrusted input: a manifest that resolves outside it, for example through a
+symlink, or that is larger than MAX_MANIFEST_BYTES, is skipped.
 """
 
 from __future__ import annotations
@@ -24,6 +26,18 @@ SIGNALS = (
     ("fastapi", (), ("fastapi",)),
 )
 
+MAX_MANIFEST_BYTES = 2 * 1024 * 1024
+
+
+def contained_file(root: Path, path: Path) -> bool:
+    """True when path is a regular file whose real location is inside root."""
+    try:
+        real = path.resolve(strict=True)
+    except (OSError, RuntimeError):
+        return False
+    return real.is_relative_to(root.resolve()) and real.is_file() and real.stat().st_size <= MAX_MANIFEST_BYTES
+
+
 REFERENCES = {
     "nextjs": "references/framework-specific/nextjs.md",
     "react": "references/framework-specific/react.md",
@@ -38,7 +52,7 @@ REFERENCES = {
 def read_manifest_names(root: Path) -> set[str]:
     names: set[str] = set()
     package = root / "package.json"
-    if package.is_file():
+    if contained_file(root, package):
         try:
             document = json.loads(package.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
@@ -49,14 +63,14 @@ def read_manifest_names(root: Path) -> set[str]:
                 names.update(value)
     for filename in ("requirements.txt", "requirements-dev.txt", "Pipfile"):
         path = root / filename
-        if not path.is_file():
+        if not contained_file(root, path):
             continue
         for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
             token = line.strip().split("==")[0].split(">=")[0].split("[")[0].strip()
             if token and not token.startswith("#"):
                 names.add(token)
     pyproject = root / "pyproject.toml"
-    if pyproject.is_file():
+    if contained_file(root, pyproject):
         names.update(pyproject_dependencies(pyproject))
     return names
 
