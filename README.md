@@ -6,6 +6,38 @@ It tells the agent to review an application the way a QA engineer, application-s
 
 The skill is technology-independent. Supabase, Firebase, payment providers, and AI integrations are reviewed only when the repository actually uses them.
 
+## Why this matters for AI-generated applications
+
+These are the failures to look for when an AI coding agent wrote or changed the application.
+
+- **Frontend-only security.** The admin control is hidden, and an ordinary user can still call the operation.
+- **Incorrect database permissions.** Sign-in works, and any signed-in user can read another user's records because ownership policies are missing.
+- **Exposed credentials.** A private AI API key, database credential, or service-role key is included in frontend JavaScript.
+- **Unverified payments.** Premium features unlock after the checkout redirect, with no confirmed payment.
+- **Exposed private documents.** Invoices, identity documents, and personal uploads sit in public storage.
+- **Overprivileged AI agents.** The assistant can reach the whole database or privileged tools. Access has to stay limited to the current user's authorised resources.
+- **Race conditions.** Simultaneous requests create duplicate rewards, orders, or charges.
+- **False confidence from testing.** The suite passes because it only covers the successful path. It never tries another user, invalid input, or a failed dependency.
+
+## How it fits into development
+
+```mermaid
+flowchart TD
+    change([New feature or code change]) --> threat([Threat modelling])
+    threat --> build([Secure implementation])
+    build --> tests([Functional and security tests])
+    tests --> audit([Application Guardian audit])
+    audit --> gate{"All mandatory checks passed?"}
+    gate -->|Yes| ship([Eligible for deployment])
+    gate -->|No, fix and retest| build
+
+    classDef ready fill:#166534,stroke:#22c55e,color:#ffffff
+    class ship ready
+    linkStyle 6 stroke:#dc2626,color:#dc2626
+```
+
+Yes means the release gate returned GO, or CONDITIONAL GO with the remaining risks explicitly accepted. No sends the change back through secure implementation, tests, and another audit. The skill does not declare an application free of vulnerabilities.
+
 ## Install
 
 Cursor loads a skill from a directory named `application-guardian` that contains `SKILL.md`.
