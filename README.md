@@ -93,7 +93,8 @@ It returns NO-GO when:
 - a critical or high finding is open, or was marked fixed without a passing test on the current commit
 - any of the [25 mandatory checks](schemas/mandatory-checks.json) is missing, failed, or not run
 - a check passed without a recorded command, exit code, result, and commit
-- a critical check passed on code review alone, without a test that ran, or with a command such as `true`, `echo`, or `python -c` that tests nothing
+- a critical check passed on code review alone, without a test that ran, or with a command such as `true`, `echo`, `python -c`, or `pytest --version` that tests nothing
+- with a control registry, the reviewed tests named for a check did not run, were skipped, or failed, even when the command exited 0
 - a critical check is NOT APPLICABLE without a named approver, or no critical check passed with a test
 - a critical or high finding was closed as a false positive without a recorded challenge
 - the evidence was recorded on a different commit, or files other than the audit reports have uncommitted changes
