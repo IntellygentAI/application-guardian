@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="280" viewBox="0 0 960 280" role="img" aria-labelledby="t d">
+  <title id="t">release_gate.py output</title>
+  <desc id="d">The release gate reads audit-result.json and prints NO-GO with its reasons: AG-001 is an unresolved high finding, invoice-ownership failed, and no mandatory check has a PASS result.</desc>
+  <style>
+    .mono { font: 500 15px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .dim { fill: #64748b; } .txt { fill: #e2e8f0; } .cmd { fill: #7dd3fc; } .prompt { fill: #34d399; }
+    .bad { fill: #f87171; font-weight: 700; } .reason { fill: #fda4af; }
+    .typed { animation: type 12s steps(62, end) infinite both; }
+    .l1 { animation: l1 12s infinite both; } .l2 { animation: l2 12s infinite both; }
+    .l3 { animation: l3 12s infinite both; } .l4 { animation: l4 12s infinite both; }
+    .l5 { animation: l5 12s infinite both; }
+    .cursor { animation: blink 1s steps(1) infinite; }
+    @keyframes type { 0% { width: 0; } 30% { width: 620px; } 95% { width: 620px; } 100% { width: 0; } }
+    @keyframes l1 { 0%, 34% { opacity: 0; } 36%, 95% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes l2 { 0%, 40% { opacity: 0; } 42%, 95% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes l3 { 0%, 46% { opacity: 0; } 48%, 95% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes l4 { 0%, 52% { opacity: 0; } 54%, 95% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes l5 { 0%, 60% { opacity: 0; } 62%, 95% { opacity: 1; } 100% { opacity: 0; } }
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) {
+      .typed, .l1, .l2, .l3, .l4, .l5, .cursor { animation: none; opacity: 1; }
+      .typed { width: 620px; }
+    }
+  </style>
+  <defs>
+    <clipPath id="reveal"><rect class="typed" x="56" y="68" width="620" height="26"/></clipPath>
+  </defs>
+
+  <rect width="960" height="280" rx="14" fill="#0b1020"/>
+  <rect x="0.5" y="0.5" width="959" height="279" rx="14" fill="none" stroke="#1f2b47"/>
+  <path d="M0 14 A14 14 0 0 1 14 0 H946 A14 14 0 0 1 960 14 V40 H0 Z" fill="#131c31"/>
+  <circle cx="24" cy="20" r="6" fill="#f87171"/><circle cx="44" cy="20" r="6" fill="#fbbf24"/><circle cx="64" cy="20" r="6" fill="#34d399"/>
+  <text class="mono dim" x="480" y="25" text-anchor="middle" font-size="13">release gate</text>
+
+  <text class="mono prompt" x="32" y="86">$</text>
+  <g clip-path="url(#reveal)">
+    <text class="mono cmd" x="56" y="86">python scripts/release_gate.py examples/sample-audit-result.json</text>
+  </g>
+
+  <text class="mono bad l1" x="32" y="124">NO-GO</text>
+  <text class="mono reason l2" x="32" y="152">- AG-001 is an unresolved high finding.</text>
+  <text class="mono reason l3" x="32" y="180">- invoice-ownership failed.</text>
+  <text class="mono reason l4" x="32" y="208">- No mandatory check has a PASS result.</text>
+  <g class="l5">
+    <text class="mono dim" x="32" y="246">exit 1</text>
+    <text class="mono txt" x="110" y="246">· a GO written in Markdown is not the decision; this script is.</text>
+  </g>
+  <rect class="cursor" x="32" y="256" width="9" height="3" fill="#34d399"/>
+</svg>

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+The version stays 0.4.0 until measured benchmarks exist.
+
+- `release_gate.py`: `--head` now always replaces any `head_commit` written in the audit file. Before, a file that recorded its own HEAD could pass GO on a later commit.
+- `release_gate.py`: a mandatory check that passed at a different commit is stale and returns NO-GO.
+- `release_gate.py`: a critical or high finding marked `fixed` needs runtime evidence. A fix supported only by static reading returns NO-GO.
+- Added regression tests for the three cases above. Each test fails on the previous gate code.
+- README: animated header and release-gate terminal (self-hosted SVG, no external services, respects reduced motion), CI badges, and quick links.
+- Added the v0.5 scenario-playbook upgrade prompt at `docs/roadmap/v0.5-upgrade-prompt.md`. It is a plan, not implemented work.
+
 ## 0.4.0
 
 The original testing, security, privacy, payment, and AI scenarios are still in the reference files. This version makes the release decision depend on structured evidence.
