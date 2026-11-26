@@ -19,14 +19,19 @@ from guardianlib import decide
 from validate_report import validate_audit
 
 
-def evaluate(document: dict, strict: bool, worktree_changes: list[str] | None = None) -> int:
+def evaluate(
+    document: dict,
+    strict: bool,
+    worktree_changes: list[str] | None = None,
+    worktree_verified: bool = True,
+) -> int:
     errors = validate_audit(document)
     if errors:
         print("Audit document is invalid:", file=sys.stderr)
         for error in errors:
             print(f"  {error}", file=sys.stderr)
         return 2
-    result = decide(document, worktree_changes=worktree_changes)
+    result = decide(document, worktree_changes=worktree_changes, worktree_verified=worktree_verified)
     decision = result["release_decision"]
     print(decision)
     for reason in result["reasons"]:
@@ -74,7 +79,8 @@ def main() -> int:
     # The real HEAD always replaces any head_commit written into the file,
     # so a report cannot vouch for its own freshness.
     document["head_commit"] = head
-    return evaluate(document, args.strict, uncommitted_changes(audit_path))
+    changes = uncommitted_changes(audit_path)
+    return evaluate(document, args.strict, changes, worktree_verified=changes is not None)
 
 
 def git(directory: Path, *arguments: str) -> subprocess.CompletedProcess | None:
@@ -96,24 +102,46 @@ def current_commit(directory: Path) -> str:
     return completed.stdout.strip() if completed and completed.returncode == 0 else ""
 
 
-def uncommitted_changes(audit_path: Path) -> list[str]:
-    """Return changed or untracked paths outside the audit folder.
+# The files an audit writes. Only these, and the audit file itself, may change
+# without a new commit. Anything else in the same folder still counts.
+REPORT_FILES = frozenset(
+    {
+        "application-audit.md",
+        "security-findings.md",
+        "threat-model.md",
+        "test-matrix.md",
+        "remediation-plan.md",
+        "production-readiness.md",
+        "audit-result.json",
+    }
+)
+
+
+def uncommitted_changes(audit_path: Path) -> list[str] | None:
+    """Return changed or untracked paths that are not audit reports.
 
     Evidence describes a commit. Code that is modified but not committed was
-    not what the checks ran against. The audit folder itself is ignored, since
-    the report is written there. When the audit file sits at the repository
-    root, only the audit file is ignored. Outside a Git repository, nothing can
-    be checked and the list is empty.
+    not what the checks ran against. The audit file and the report files next
+    to it are ignored, since the audit writes them. Every other path counts,
+    including other files in the audit folder.
+
+    Returns None when the working tree cannot be checked: the audit file is
+    not inside a Git repository, or git status fails. The gate treats that as
+    NO-GO, never as a clean tree.
     """
     top = git(audit_path.parent, "rev-parse", "--show-toplevel")
     if not top or top.returncode != 0:
-        return []
+        return None
     root = Path(top.stdout.strip()).resolve()
     status = git(root, "status", "--porcelain=v1", "-z", "--untracked-files=all")
     if not status or status.returncode != 0:
-        return []
-    relative_file = audit_path.relative_to(root).as_posix()
+        return None
+    try:
+        relative_file = audit_path.relative_to(root).as_posix()
+    except ValueError:
+        return None
     audit_dir = audit_path.parent.relative_to(root).as_posix()
+    audit_dir = "" if audit_dir == "." else audit_dir
     changed: list[str] = []
     entries = status.stdout.split("\0")
     index = 0
@@ -127,7 +155,8 @@ def uncommitted_changes(audit_path: Path) -> list[str]:
             index += 1  # the next entry is the rename source
         if path == relative_file:
             continue
-        if audit_dir not in {"", "."} and (path == audit_dir or path.startswith(audit_dir + "/")):
+        folder, _, name = path.rpartition("/")
+        if folder == audit_dir and name in REPORT_FILES:
             continue
         changed.append(path)
     return changed

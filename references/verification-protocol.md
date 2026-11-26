@@ -42,7 +42,14 @@ Schema version `1.1`. Start from `scripts/scaffold_audit.py`, which lists every 
 - **A verification run for every fixed critical or high finding**, with the same fields as a runtime PASS, on the current commit. A fix verified on an older commit is stale.
 - **An approval record for every accepted risk** in `accepted_risks`: `id` of the accepted medium or low finding, `owner`, `approved_by`, `approved_at`, and `reason`. A record that matches no accepted finding is NO-GO.
 
-The gate also runs `git status` in the repository that holds the audit file. A changed or untracked file outside the audit folder means the checks did not run against what would ship, and the decision is NO-GO until it is committed and the checks are re-run.
+The gate also runs `git status` in the repository that holds the audit file. Only the audit file and the six report files beside it (`application-audit.md`, `security-findings.md`, `threat-model.md`, `test-matrix.md`, `remediation-plan.md`, `production-readiness.md`) may be uncommitted. Any other changed or untracked file, including one in the audit folder, means the checks did not run against what would ship, and the decision is NO-GO until it is committed and the checks are re-run. If the audit file is not in a Git repository, or `git status` fails, the gate cannot confirm what would ship, and the decision is NO-GO.
+
+### What the gate cannot prove
+
+The gate checks that the evidence is complete, consistent, and recorded on the current commit. It cannot prove that a recorded command really ran, that its output was not edited, or that an approval came from the person named. An agent could write a convincing record without running anything. Two habits close most of that gap:
+
+- Run the tests and the gate in CI on the release commit, so the passing run comes from CI and not from the audit file.
+- Add accepted risks in a pull request that the named approver reviews, so the approval is in the review history.
 
 ## Finding labels
 
@@ -77,7 +84,8 @@ The script is the decision. It returns exit 0 for GO and CONDITIONAL GO, and exi
 | Critical control with only static evidence | NO-GO |
 | Fixed critical or high finding without a passing run on HEAD | NO-GO |
 | Audit or check commit differs from HEAD | NO-GO |
-| Uncommitted changes outside the audit folder | NO-GO |
+| Uncommitted changes other than the audit reports | NO-GO |
+| Working tree cannot be checked (not a Git repository, or `git status` failed) | NO-GO |
 | Open medium or low finding without acceptance | NO-GO |
 | Accepted risk without owner, approver, date, and reason | NO-GO |
 | Accepted medium or low risk, and no blocker above | CONDITIONAL GO |

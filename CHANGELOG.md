@@ -17,6 +17,10 @@ The version stays 0.4.0 until measured benchmarks exist.
 - Added a matched pair of SQL evaluation fixtures: a string-built query with a request-controlled sort, and a bound query with an allowlisted sort that must not be reported.
 - README rewritten around what the skill checks and how the release gate decides.
 - README explains how a run works and why the skill exists, and groups the checks by area.
+- `release_gate.py`: a failed `git status`, or an audit file outside a Git repository, is NO-GO. Before, both read as a clean working tree.
+- `release_gate.py`: only the audit file and the six report files beside it may be uncommitted. Before, the whole folder holding the audit file was skipped, so an audit file saved next to code hid changes to that code.
+- Added five regression tests for the two changes above. Each fails on the previous gate.
+- `references/verification-protocol.md` and README: say what the gate cannot prove, and how CI and reviewed approvals close the gap.
 - `docs/benchmarks.md`: measure activation before detection.
 - Roadmap prompt: neutral, maintainer-facing wording.
 - `release_gate.py`: every check in the new `schemas/mandatory-checks.json` (25 checks, matching the release checklist) must appear once in `audit-result.json`. A missing, duplicated, or downgraded critical check is NO-GO.

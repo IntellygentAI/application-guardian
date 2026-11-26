@@ -201,11 +201,11 @@ Do not make irreversible production changes automatically.
 
 ## Release decision
 
-When a release decision is requested, fill [templates/release-checklist.md](templates/release-checklist.md) and `docs/audits/audit-result.json`, then run the skill's `scripts/release_gate.py` with `--head` set to the current commit. Without `--head` the script reads HEAD from the repository that holds the audit file, and exits 2 when it cannot. The audit result lists every check in [schemas/mandatory-checks.json](schemas/mandatory-checks.json); every PASS records the command, exit code, observed result, and commit; every NOT APPLICABLE gives a justification; and every accepted risk names an owner and an approver. Commit the code before running the gate, because uncommitted changes outside the audit folder are NO-GO. If the script cannot run in this environment, the decision is NO-GO and the reason is that the gate was not executed. The script's decision is the release decision:
+When a release decision is requested, fill [templates/release-checklist.md](templates/release-checklist.md) and `docs/audits/audit-result.json`, then run the skill's `scripts/release_gate.py` with `--head` set to the current commit. Without `--head` the script reads HEAD from the repository that holds the audit file, and exits 2 when it cannot. The audit result lists every check in [schemas/mandatory-checks.json](schemas/mandatory-checks.json); every PASS records the command, exit code, observed result, and commit; every NOT APPLICABLE gives a justification; and every accepted risk names an owner and an approver. Commit the code before running the gate, because any uncommitted change other than the audit reports is NO-GO, and so is a working tree the gate cannot check. If the script cannot run in this environment, the decision is NO-GO and the reason is that the gate was not executed. The script's decision is the release decision:
 
-- **GO** — Mandatory checks passed and no unresolved release-blocking finding remains.
-- **CONDITIONAL GO** — No unresolved critical or high-severity security finding remains, and documented lower-priority risks are explicitly accepted.
-- **NO-GO** — A critical or high-severity security issue, a failed mandatory test, an unverified critical control, stale evidence, or another release blocker remains.
+- **GO**: Mandatory checks passed and no unresolved release-blocking finding remains.
+- **CONDITIONAL GO**: No unresolved critical or high-severity security finding remains, and documented lower-priority risks are explicitly accepted.
+- **NO-GO**: A critical or high-severity security issue, a failed mandatory test, an unverified critical control, stale evidence, or another release blocker remains.
 
 Do not declare the application free of vulnerabilities. Do not write a GO that the script does not print.
 
