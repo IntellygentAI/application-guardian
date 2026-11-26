@@ -1,4 +1,6 @@
 import json
+import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -14,6 +16,7 @@ import release_gate  # noqa: E402
 import scaffold_audit  # noqa: E402
 import validate_report  # noqa: E402
 import validate_skill  # noqa: E402
+import ci_evidence  # noqa: E402,F401
 
 COMMIT = "abc123"
 INVENTORY = guardianlib.load_inventory()
@@ -108,10 +111,21 @@ def reasons(report, **kwargs):
     return " ".join(guardianlib.decide(report, **kwargs)["reasons"])
 
 
-def run_gate(path, *extra, cwd=None):
+def run_gate(path, *extra, cwd=None, env=None):
     return subprocess.run(
         [sys.executable, str(ROOT / "scripts" / "release_gate.py"), str(path), *extra],
         cwd=cwd,
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def run_ci(path, out, *extra, env=None):
+    return subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "ci_evidence.py"), str(path), "--out", str(out), *extra],
+        env=env,
         capture_output=True,
         text=True,
         check=False,
@@ -346,6 +360,51 @@ class ReleaseGateTests(unittest.TestCase):
     def test_unverified_worktree_blocks_release(self):
         self.assertEqual(decision(document(), worktree_verified=False), "NO-GO")
 
+    def test_committing_the_reports_keeps_evidence_current(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path = self.committed_repo(tmp, "docs/audits")
+            (repo / "docs" / "audits" / "application-audit.md").write_text("report", encoding="utf-8")
+            git(repo, "add", "-A")
+            git(repo, "commit", "-q", "-m", "audit reports")
+            reports_committed = run_gate(path)
+            (repo / "src" / "app.py").write_text("print('v2')\n", encoding="utf-8")
+            git(repo, "commit", "-q", "-am", "change code")
+            code_committed = run_gate(path)
+        self.assertEqual(reports_committed.returncode, 0, reports_committed.stdout + reports_committed.stderr)
+        self.assertEqual(code_committed.returncode, 1)
+        self.assertIn("stale", code_committed.stdout)
+
+    def test_report_commit_does_not_cover_other_files_in_the_audit_folder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path = self.committed_repo(tmp, "docs/audits")
+            (repo / "docs" / "audits" / "helper.py").write_text("code", encoding="utf-8")
+            git(repo, "add", "-A")
+            git(repo, "commit", "-q", "-m", "audit and helper")
+            completed = run_gate(path)
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("stale", completed.stdout)
+
+    def test_branch_name_as_recorded_commit_stays_stale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path = self.committed_repo(tmp, "docs/audits")
+            git(repo, "add", "-A")
+            git(repo, "commit", "-q", "-m", "audit")
+            for name in ("HEAD", "HEAD~1", "master"):
+                path.write_text(json.dumps(document(commit=name, mandatory_checks=all_checks(name))),
+                                encoding="utf-8")
+                completed = run_gate(path)
+                self.assertEqual(completed.returncode, 1, name)
+                self.assertIn("stale", completed.stdout, name)
+
+    def test_unknown_recorded_commit_stays_stale(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path = self.committed_repo(tmp, "docs/audits")
+            path.write_text(json.dumps(document(commit="0" * 40, mandatory_checks=all_checks("0" * 40))),
+                            encoding="utf-8")
+            completed = run_gate(path)
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("stale", completed.stdout)
+
     # Command line and HEAD
 
     def test_cli_without_head_outside_git_exits_2(self):
@@ -393,6 +452,133 @@ class ReleaseGateTests(unittest.TestCase):
         )
         self.assertEqual(validate_report.validate_audit(sample), [])
         self.assertEqual(decision(sample), "NO-GO")
+
+
+SCRIPTS = {
+    "ok.py": "raise SystemExit(0)\n",
+    "fail.py": "raise SystemExit(1)\n",
+    "sleep.py": "import time\ntime.sleep(30)\n",
+    "no_secret.py": "import os\nraise SystemExit(1 if 'GUARDIAN_TEST_SECRET' in os.environ else 0)\n",
+}
+
+
+class CiEvidenceTests(unittest.TestCase):
+    """CI repeats each recorded command; the gate trusts only what CI saw."""
+
+    def ci_repo(self, tmp, command="python ok.py", overrides=None):
+        repo = Path(tmp) / "repo"
+        repo.mkdir()
+        subprocess.run(["git", "init", "-q", str(repo)], check=True)
+        for name, body in SCRIPTS.items():
+            (repo / name).write_text(body, encoding="utf-8")
+        audits = repo / "docs" / "audits"
+        audits.mkdir(parents=True)
+        path = audits / "audit-result.json"
+        path.write_text("{}", encoding="utf-8")
+        git(repo, "add", "-A")
+        git(repo, "commit", "-q", "-m", "app")
+        head = head_of(repo)
+        checks = all_checks(head)
+        for check in checks:
+            check["command"] = (overrides or {}).get(check["id"], command)
+        path.write_text(json.dumps(document(commit=head, mandatory_checks=checks)), encoding="utf-8")
+        git(repo, "add", "-A")
+        git(repo, "commit", "-q", "-m", "audit")
+        return repo, path, Path(tmp) / "evidence"
+
+    def env(self, **extra):
+        environment = {key: value for key, value in os.environ.items() if not key.startswith("GITHUB_")}
+        environment.update(extra)
+        return environment
+
+    def gate(self, path, out, env=None):
+        return run_gate(path, "--ci-evidence", out / "ci-evidence.json", env=env or self.env())
+
+    def test_passing_ci_runs_give_go(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path, out = self.ci_repo(tmp)
+            produced = run_ci(path, out, env=self.env())
+            evidence = json.loads((out / "ci-evidence.json").read_text(encoding="utf-8"))
+            completed = self.gate(path, out)
+        self.assertEqual(produced.returncode, 0, produced.stdout + produced.stderr)
+        self.assertEqual(len(evidence["runs"]), 1)
+        self.assertEqual(len(evidence["runs"][0]["ids"]), len(INVENTORY))
+        self.assertEqual(len(evidence["runs"][0]["output_sha256"]), 64)
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+    def test_claimed_pass_that_fails_in_ci_is_no_go(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path, out = self.ci_repo(tmp, overrides={"ownership": "python fail.py"})
+            run_ci(path, out, env=self.env())
+            completed = self.gate(path, out)
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("ownership: the command exited 1 in CI", completed.stdout)
+
+    def test_runner_outside_the_allowlist_is_not_run(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path, out = self.ci_repo(tmp, overrides={"secrets": "sh -c 'exit 0'"})
+            produced = run_ci(path, out, env=self.env())
+            completed = self.gate(path, out)
+        self.assertIn("not run", produced.stdout)
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("secrets: CI refused to run the command", completed.stdout)
+
+    def test_secrets_are_not_passed_to_commands(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path, out = self.ci_repo(tmp, command="python no_secret.py")
+            run_ci(path, out, env=self.env(GUARDIAN_TEST_SECRET="value"))
+            completed = self.gate(path, out)
+        self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+
+    def test_command_that_hangs_times_out(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path, out = self.ci_repo(tmp, overrides={"authentication": "python sleep.py"})
+            run_ci(path, out, "--timeout", "1", env=self.env())
+            completed = self.gate(path, out)
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("authentication: the command timed out in CI", completed.stdout)
+
+    def test_evidence_from_another_run_is_no_go(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path, out = self.ci_repo(tmp)
+            run_ci(path, out, env=self.env(GITHUB_RUN_ID="111"))
+            completed = self.gate(path, out, env=self.env(GITHUB_RUN_ID="222"))
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("different workflow run", completed.stdout)
+
+    def test_audit_edited_after_ci_ran_is_no_go(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path, out = self.ci_repo(tmp)
+            run_ci(path, out, env=self.env())
+            path.write_text(path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+            completed = self.gate(path, out)
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("audit file changed after CI ran", completed.stdout)
+
+    def test_missing_evidence_file_exits_2(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path, out = self.ci_repo(tmp)
+            completed = self.gate(path, out)
+        self.assertEqual(completed.returncode, 2)
+
+    def test_evidence_folder_inside_the_repository_is_refused(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, path, out = self.ci_repo(tmp)
+            produced = run_ci(path, repo / "evidence", env=self.env())
+        self.assertEqual(produced.returncode, 2)
+        self.assertIn("outside the repository", produced.stderr)
+
+    def test_recorded_run_missing_from_evidence_is_no_go(self):
+        report = document()
+        evidence = {"schema_version": "1.0", "commit": COMMIT, "runs": []}
+        self.assertEqual(decision(report, ci_evidence=evidence), "NO-GO")
+        self.assertIn("CI has no run", reasons(report, ci_evidence=evidence))
+
+    def test_evidence_with_another_command_is_no_go(self):
+        report = document()
+        runs = [{"ids": [item["id"]], "command": "pytest -k nothing", "exit_code": 0} for item in INVENTORY]
+        evidence = {"schema_version": "1.0", "commit": COMMIT, "runs": runs}
+        self.assertIn("different command", reasons(report, ci_evidence=evidence))
 
 
 class ScaffoldTests(unittest.TestCase):
@@ -451,6 +637,34 @@ class StackTests(unittest.TestCase):
             self.assertIn("fastapi", found)
             self.assertIn("stripe", found)
             self.assertNotIn("django", found)
+
+
+class CiTemplateTests(unittest.TestCase):
+    def setUp(self):
+        self.workflow = (ROOT / "templates" / "ci" / "guardian-release.yml").read_text(encoding="utf-8")
+
+    def test_actions_are_pinned_to_full_commit_shas(self):
+        uses = re.findall(r"uses:\s*(\S+)", self.workflow)
+        self.assertTrue(uses)
+        for action in uses:
+            self.assertRegex(action, r"@[0-9a-f]{40}$", action)
+
+    def test_token_is_read_only_and_not_kept(self):
+        self.assertIn("permissions:\n  contents: read", self.workflow)
+        self.assertNotIn("write", self.workflow.split("jobs:")[0])
+        self.assertIn("persist-credentials: false", self.workflow)
+
+    def test_no_privileged_trigger(self):
+        self.assertNotIn("pull_request_target", self.workflow)
+        self.assertNotIn("workflow_run", self.workflow)
+
+    def test_no_expression_inside_run_scripts(self):
+        for block in re.findall(r"run: \|?\n?((?:.*\n)*?)(?=\n      - |\Z)", self.workflow):
+            self.assertNotIn("${{", block)
+
+    def test_gate_uses_ci_evidence(self):
+        self.assertIn("ci_evidence.py", self.workflow)
+        self.assertIn("--ci-evidence", self.workflow)
 
 
 class SkillValidationTests(unittest.TestCase):
