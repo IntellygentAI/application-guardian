@@ -161,7 +161,7 @@ Label each item confirmed or suspected. A suspected risk stays suspected until t
 
 ### 5. Record findings
 
-For every finding record: ID, title, severity, confidence, file and line, endpoint or component, description, root cause, preconditions, impact, expected behaviour, observed behaviour, safe reproduction using synthetic data, remediation, OWASP or CWE reference when known, regression test, verification status, and the challenge: how you tried to disprove it.
+For every finding record: ID, title, severity, confidence, file and line, endpoint or component, description, root cause, preconditions, impact, expected behaviour, observed behaviour, safe reproduction using synthetic data, remediation, OWASP or CWE reference when known, regression test, verification status, and the challenge: how you tried to disprove it. A critical or high finding closed as `false_positive` must record its challenge, or the gate returns NO-GO.
 
 Statuses are PASS, FAIL, NOT TESTED, BLOCKED, or NOT APPLICABLE. Follow [references/verification-protocol.md](references/verification-protocol.md). Static evidence and runtime evidence are different. A file and line can support a finding. A critical authorisation, tenant, payment, or database-policy check PASSes only with a command that was executed on the recorded commit. An unexecuted test is NOT TESTED. Evidence from an older commit is stale after a material change.
 
@@ -204,13 +204,15 @@ Do not make irreversible production changes automatically.
 
 ## Release decision
 
-When a release decision is requested, fill [templates/release-checklist.md](templates/release-checklist.md) and `docs/audits/audit-result.json`, then run the skill's `scripts/release_gate.py` with `--head` set to the current commit. Without `--head` the script reads HEAD from the repository that holds the audit file, and exits 2 when it cannot. The audit result lists every check in [schemas/mandatory-checks.json](schemas/mandatory-checks.json); every PASS records the command, exit code, observed result, and commit; every NOT APPLICABLE gives a justification; and every accepted risk names an owner and an approver. Commit the code before running the gate, because any uncommitted change other than the audit reports is NO-GO, and so is a working tree the gate cannot check. If the script cannot run in this environment, the decision is NO-GO and the reason is that the gate was not executed. For a release, recommend running the gate in CI with `templates/ci/guardian-release.yml`, which re-runs every recorded command and passes only what CI saw pass. See [docs/ci.md](docs/ci.md). During an audit, propose the workflow; add it only in Fix and Verify, with approval. The script's decision is the release decision:
+When a release decision is requested, fill [templates/release-checklist.md](templates/release-checklist.md) and `docs/audits/audit-result.json`, then run the skill's `scripts/release_gate.py` with `--head` set to the current commit. Without `--head` the script reads HEAD from the repository that holds the audit file, and exits 2 when it cannot. The audit result lists every check in [schemas/mandatory-checks.json](schemas/mandatory-checks.json); every PASS records the command, exit code, observed result, and commit; every NOT APPLICABLE gives a justification, and a critical one also names who approved it in `approved_by`; every critical PASS names a test file run by a test runner, not `true`, `echo`, or inline code such as `python -c`; and every accepted risk names an owner and an approver. Commit the code before running the gate, because any uncommitted change other than the audit reports is NO-GO, and so is a working tree the gate cannot check. If the script cannot run in this environment, the decision is NO-GO and the reason is that the gate was not executed. For a release, recommend running the gate in CI with `templates/ci/guardian-release.yml`, which re-runs every recorded command and passes only what CI saw pass. See [docs/ci.md](docs/ci.md). During an audit, propose the workflow; add it only in Fix and Verify, with approval. The script's decision is the release decision:
 
 - **GO**: Mandatory checks passed and no unresolved release-blocking finding remains.
 - **CONDITIONAL GO**: No unresolved critical or high-severity security finding remains, and documented lower-priority risks are explicitly accepted.
 - **NO-GO**: A critical or high-severity security issue, a failed mandatory test, an unverified critical control, stale evidence, or another release blocker remains.
 
 Do not declare the application free of vulnerabilities. Do not write a GO that the script does not print.
+
+The script checks that the evidence is complete and current. It does not read the code. Its NO-GO reasons are where your review starts, not where it ends: compare each recorded claim with the code, and check that each recorded command runs a test that exercises the control it claims. Report any mismatch, even when the script already says NO-GO, and treat a GO as unproven until you have done this.
 
 ## Continuous enforcement
 
