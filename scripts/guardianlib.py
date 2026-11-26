@@ -53,11 +53,14 @@ def decide(
     document: dict[str, Any],
     inventory: list[dict[str, Any]] | None = None,
     worktree_changes: list[str] | None = None,
+    worktree_verified: bool = True,
 ) -> dict[str, Any]:
     """Return a decision, the reasons, and whether release is allowed.
 
     inventory defaults to schemas/mandatory-checks.json. worktree_changes are
-    paths with uncommitted changes outside the audit folder; the CLI fills it.
+    paths with uncommitted changes that are not audit reports; the CLI fills
+    it. worktree_verified is False when the CLI could not run git status, and
+    the decision is then NO-GO.
     """
     reasons: list[str] = []
     findings = document.get("findings") or []
@@ -71,6 +74,12 @@ def decide(
 
     # The commit the release is for. Evidence from any other commit is stale.
     reference = head or audited
+
+    if not worktree_verified:
+        reasons.append(
+            "Could not confirm that the working tree matches the commit: the audit file is not "
+            "inside a Git repository, or git status failed. Run the gate inside the application's repository."
+        )
 
     if worktree_changes:
         shown = ", ".join(worktree_changes[:5])
