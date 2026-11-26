@@ -21,6 +21,7 @@ The version stays 0.4.0 until measured benchmarks exist.
 - `release_gate.py`: only the audit file and the six report files beside it may be uncommitted. Before, the whole folder holding the audit file was skipped, so an audit file saved next to code hid changes to that code.
 - Added five regression tests for the two changes above. Each fails on the previous gate.
 - `references/verification-protocol.md` and README: say what the gate cannot prove, and how CI and reviewed approvals close the gap.
+- `references/legal-exposure.md`: notices that match the data flow, erasure, children, cancellation, tracking consent, name searches, client secrets, provider spend caps, and licenses. Figures are taken from the GDPR text, the COPPA Rule, ROSCA, and the FTC's GoodRx and Epic orders. The vacated 2024 Negative Option Rule is not the cancellation standard.
 - `docs/benchmarks.md`: measure activation before detection.
 - Roadmap prompt: neutral, maintainer-facing wording.
 - `release_gate.py`: every check in the new `schemas/mandatory-checks.json` (25 checks, matching the release checklist) must appear once in `audit-result.json`. A missing, duplicated, or downgraded critical check is NO-GO.

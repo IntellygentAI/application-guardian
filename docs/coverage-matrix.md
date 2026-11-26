@@ -31,6 +31,7 @@ This maps the original specification and the later additions to the files that h
 | Supply chain, CI, email, SMS, jobs, feature flags, DNS | `references/supply-chain-security.md` |
 | Mobile and PWA | `references/mobile-security.md` |
 | Retention and observability privacy | `references/data-privacy.md` |
+| Notices, erasure, children, cancellation, tracking consent, names, licenses | `references/legal-exposure.md` |
 | Tenant switching and recovery objectives | `references/database-security.md` |
 | Static versus runtime evidence, freshness, deterministic decision | `references/verification-protocol.md` |
 | Framework notes | `references/framework-specific/` |

@@ -70,7 +70,7 @@ Verify that only necessary personal data is collected, sensitive data is protect
 
 Account deletion revokes access. Deleted information follows the documented retention policy. Export is limited to authorised data. Backups follow retention and access policy. Shared devices do not show the previous user's cached private data. Third parties receive only the data they need.
 
-Identify applicable privacy obligations, such as UK GDPR or EU GDPR, when the product context makes them relevant. Separate technical findings from matters that need legal or regulatory review. Do not give a legal conclusion.
+Identify applicable privacy obligations, such as UK GDPR or EU GDPR, when the product context makes them relevant. Separate technical findings from matters that need legal or regulatory review. Do not give a legal conclusion. Notices, erasure, children, and tracking consent are in [legal-exposure.md](legal-exposure.md).
 
 ## Retention
 
