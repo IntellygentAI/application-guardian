@@ -4,6 +4,8 @@
 
 The version stays 0.4.0 until measured benchmarks exist.
 
+- README hero keeps the shield, the drawn check, and the six-row cycle. The surface uses the Intellygent mark's green and gold, and a small mark stays in the corner. The image is embedded, so the banner still makes no external request.
+
 - `release_gate.py`: `--head` now always replaces any `head_commit` written in the audit file. Before, a file that recorded its own HEAD could pass GO on a later commit.
 - `release_gate.py`: a mandatory check that passed at a different commit is stale and returns NO-GO.
 - `release_gate.py`: a critical or high finding marked `fixed` needs runtime evidence. A fix supported only by static reading returns NO-GO.
