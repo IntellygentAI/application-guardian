@@ -37,4 +37,4 @@ Redemption is atomic. Uniqueness constraints exist. Per-user and global limits a
 
 Test a free account calling a premium feature, a client-side subscription flag, access after expiry, cancellation during use, downgrade, quota bypass, multiple sessions, and direct calls to premium APIs.
 
-Subscriptions, entitlements, quotas, and usage limits are enforced on the backend. Hiding a control in the interface does not protect a paid feature.
+Subscriptions, entitlements, quotas, and usage limits are enforced on the backend. Hiding a control in the interface does not protect a paid feature. Stopping a recurring charge is specified in [legal-exposure.md](legal-exposure.md).

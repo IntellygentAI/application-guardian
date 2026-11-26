@@ -8,6 +8,7 @@ Dependency inspection inside the application repository is also covered in [prod
 - A compromised, typosquat, or unexpected new package is reported. Do not upgrade a major version as part of an audit.
 - Generate or review an SBOM only when the repository already has that tooling. Otherwise record NOT TESTED and name the missing command.
 - Provenance is reviewed for artefacts the product publishes. Do not claim a signature was verified unless the check was executed.
+- License obligations for shipped code, fonts, and media are in [legal-exposure.md](legal-exposure.md).
 
 ## CI/CD
 

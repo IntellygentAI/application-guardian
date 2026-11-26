@@ -32,7 +32,7 @@ Test long prompts, repeated expensive requests, large uploads, excessive output,
 
 Require input size limits, output token limits, per-account quotas, concurrency limits, timeouts, tool budgets, agent iteration limits, cost monitoring, and cancellation.
 
-One user must not be able to create uncontrolled infrastructure or provider cost.
+One user must not be able to create uncontrolled infrastructure or provider cost. A provider-enforced spend ceiling is specified in [legal-exposure.md](legal-exposure.md).
 
 ## Output handling
 

@@ -25,6 +25,7 @@ REQUIRED = (
     "references/functional-testing.md",
     "references/security-testing.md",
     "references/data-privacy.md",
+    "references/legal-exposure.md",
     "references/database-security.md",
     "references/api-security.md",
     "references/payment-security.md",
