@@ -31,6 +31,8 @@ jobs:
       # Where the skill is committed in this repository. npx skills add puts it here.
       GUARDIAN: .agents/skills/application-guardian
       AUDIT: docs/audits/audit-result.json
+      # Reviewed tests for each mandatory check. See docs/ci.md, "Binding checks to tests".
+      CONTROLS: guardian-checks.json
     steps:
       - name: Check out the commit under review
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -53,7 +55,7 @@ jobs:
           exit 1
 
       - name: Re-run the recorded commands
-        run: python "$GUARDIAN/scripts/ci_evidence.py" "$AUDIT" --out "$RUNNER_TEMP/guardian"
+        run: python "$GUARDIAN/scripts/ci_evidence.py" "$AUDIT" --out "$RUNNER_TEMP/guardian" --controls "$CONTROLS"
 
       - name: Keep the evidence
         if: always()
@@ -75,6 +77,7 @@ jobs:
     env:
       GUARDIAN: .agents/skills/application-guardian
       AUDIT: docs/audits/audit-result.json
+      CONTROLS: guardian-checks.json
     steps:
       - name: Check out the same commit on a fresh runner
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -96,4 +99,4 @@ jobs:
           path: ${{ runner.temp }}/guardian
 
       - name: Release gate
-        run: python "$GUARDIAN/scripts/release_gate.py" "$AUDIT" --ci-evidence "$RUNNER_TEMP/guardian/ci-evidence.json"
+        run: python "$GUARDIAN/scripts/release_gate.py" "$AUDIT" --ci-evidence "$RUNNER_TEMP/guardian/ci-evidence.json" --controls "$CONTROLS"
