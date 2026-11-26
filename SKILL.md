@@ -179,6 +179,8 @@ docs/audits/
 
 Fill them from [templates/audit-report.md](templates/audit-report.md), [templates/threat-model.md](templates/threat-model.md), [templates/test-matrix.md](templates/test-matrix.md), and [templates/release-checklist.md](templates/release-checklist.md).
 
+Run `git check-ignore docs/audits/audit-result.json` in the target repository. If the path is ignored, say so in the report and propose an allowlist line. Do not edit `.gitignore` outside Fix and Verify.
+
 The audit report includes an executive summary, scope, architecture, methods, tests executed, passed, failed, and not executed, confirmed and suspected vulnerabilities, release blockers, remediation priorities, changes made, remaining risk, external verification still required, and the release recommendation.
 
 Adapt the authorisation matrix in [templates/test-matrix.md](templates/test-matrix.md) to the real permission model. Do not assume administrators may read all private data. Test permitted and prohibited operations.
@@ -199,7 +201,7 @@ Do not make irreversible production changes automatically.
 
 ## Release decision
 
-When a release decision is requested, fill [templates/release-checklist.md](templates/release-checklist.md) and `docs/audits/audit-result.json`, then run the skill's `scripts/release_gate.py` with `--head` set to the current commit. The script's decision is the release decision:
+When a release decision is requested, fill [templates/release-checklist.md](templates/release-checklist.md) and `docs/audits/audit-result.json`, then run the skill's `scripts/release_gate.py` with `--head` set to the current commit. Without `--head` the script reads HEAD from the repository that holds the audit file, and exits 2 when it cannot. Every PASS records the commit it ran on. If the script cannot run in this environment, the decision is NO-GO and the reason is that the gate was not executed. The script's decision is the release decision:
 
 - **GO** — Mandatory checks passed and no unresolved release-blocking finding remains.
 - **CONDITIONAL GO** — No unresolved critical or high-severity security finding remains, and documented lower-priority risks are explicitly accepted.
