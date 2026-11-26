@@ -90,7 +90,7 @@ Read a reference before assessing that domain. Skip a conditional section when t
 | Input, network, devices, concurrency, accounts, permissions, locale | [references/functional-testing.md](references/functional-testing.md) |
 | Authentication, access control, XSS, injection, browser, SSRF | [references/security-testing.md](references/security-testing.md) |
 | Private data, enumeration, files, secrets, privacy lifecycle | [references/data-privacy.md](references/data-privacy.md) |
-| Notices, erasure, children, cancellation, tracking consent, names, licenses | [references/legal-exposure.md](references/legal-exposure.md) |
+| Notices, terms, refunds, cookies, children, reviews, claims, names, licenses | [references/legal-exposure.md](references/legal-exposure.md) |
 | Supabase, Firebase, integrity, backup | [references/database-security.md](references/database-security.md) |
 | Endpoint inventory and API abuse | [references/api-security.md](references/api-security.md) |
 | Price, payment, coupons, entitlements | [references/payment-security.md](references/payment-security.md) |
@@ -223,6 +223,8 @@ A failed mandatory security or regression check blocks the release recommendatio
 Watch for these when the application was generated or changed with an AI coding agent:
 
 - The admin control is hidden in the interface and the operation is still callable.
+- The account was deleted, but a signed access token still authorises requests until a distant expiry because the server never looks up a session.
+- A second copy of the app is running, and the login exists only in the memory of the process that handled sign-in.
 - Authentication succeeds and any signed-in user can read another user's rows.
 - A provider secret, database password, or service-role key is present in client code or a public env var.
 - Premium access is granted from a checkout redirect without a verified provider event.
@@ -230,7 +232,8 @@ Watch for these when the application was generated or changed with an AI coding 
 - An AI tool or retrieval path can reach data the current user cannot access.
 - A single request is correct and concurrent requests duplicate charges, orders, or rewards.
 - The suite passes because it never exercises another user, invalid input, or a failed dependency.
-- Analytics or an advertising tag runs before the user agrees, or the privacy notice omits a service the code sends personal data to.
+- Analytics or an advertising tag runs before the user agrees, the banner offers only Accept, or the privacy notice omits a service the code sends personal data to.
+- A review or a measurable performance claim is written into the interface with no record that a customer said it or that the claim was tested.
 - Account deletion hides the profile and leaves the data. A subscription starts in one step and cannot be stopped the same way.
 
 ## Standards
@@ -241,6 +244,8 @@ Use the version that matches the repository:
 - [OWASP WSTG](https://owasp.org/www-project-web-security-testing-guide/)
 - [OWASP API Security](https://owasp.org/projects/api-security/)
 - [OWASP Cheat Sheet Series](https://cheatsheetseries.owasp.org/)
+- [RFC 7519 JWT](https://www.rfc-editor.org/rfc/rfc7519)
+- [RFC 9700 OAuth 2.0 Security](https://www.rfc-editor.org/rfc/rfc9700)
 - [OWASP GenAI Security](https://genai.owasp.org/)
 - [CWE](https://cwe.mitre.org/)
 - [NIST SSDF](https://csrc.nist.gov/projects/ssdf)
