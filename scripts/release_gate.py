@@ -20,6 +20,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from guardian_controls import load_registry, registry_file_problems
 from guardianlib import decide
 from validate_report import validate_audit
 
@@ -34,6 +35,7 @@ def evaluate(
     ci_expected: dict[str, str] | None = None,
     extra_runners: frozenset[str] | set[str] = frozenset(),
     extra_reasons: list[str] | None = None,
+    controls: dict | None = None,
 ) -> int:
     errors = validate_audit(document)
     if errors:
@@ -50,6 +52,7 @@ def evaluate(
         ci_expected=ci_expected,
         extra_runners=extra_runners,
         extra_reasons=extra_reasons,
+        controls=controls,
     )
     decision = result["release_decision"]
     print(decision)
@@ -85,6 +88,12 @@ def main() -> int:
         action="append",
         default=[],
         help="Accept another test runner name in critical check commands. Pass it to ci_evidence.py with --allow too.",
+    )
+    parser.add_argument(
+        "--controls",
+        type=Path,
+        help="Control registry (guardian-checks.json). Each critical PASS must use its registry command; "
+        "with --ci-evidence, every required test must have run and passed in the test report.",
     )
     args = parser.parse_args()
     if not args.audit_json.is_file():
@@ -130,6 +139,15 @@ def main() -> int:
             "run_attempt": os.environ.get("GITHUB_RUN_ATTEMPT", ""),
             "repository": os.environ.get("GITHUB_REPOSITORY", ""),
         }
+    controls = None
+    if args.controls is not None:
+        controls, problems = load_registry(args.controls)
+        location = _audit_location(audit_path)
+        if location is None:
+            problems.append("The control registry cannot be checked outside a Git repository.")
+        else:
+            problems.extend(registry_file_problems(location[0], args.controls, controls))
+        extra_reasons.extend(problems)
     changes = uncommitted_changes(audit_path)
     return evaluate(
         document,
@@ -141,6 +159,7 @@ def main() -> int:
         ci_expected=ci_expected,
         extra_runners=frozenset(args.allow_runner),
         extra_reasons=extra_reasons,
+        controls=controls,
     )
 
 

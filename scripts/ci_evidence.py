@@ -40,6 +40,7 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+from guardian_controls import information_only, load_registry, read_junit
 from guardianlib import CI_SCHEMA_VERSION, INLINE_CODE, TEST_RUNNERS, recorded_runs, runner_name
 
 ALLOWED_RUNNERS = TEST_RUNNERS
@@ -109,6 +110,8 @@ def resolve_program(argv: list[str], root: Path, allowed: frozenset[str]) -> str
         return f"{program} is not an allowed test runner (add it with --allow)"
     if INLINE_CODE.get(name, set()) & set(argv[1:]):
         return f"{program} would run inline code instead of a test file"
+    if information_only(argv):
+        return f"{program} would print version, help, or a test list instead of running tests"
     if "/" in program or "\\" in program:
         target = (root / program).resolve()
         if not target.is_relative_to(root):
@@ -209,6 +212,12 @@ def main() -> int:
     parser.add_argument(
         "--keep-env", action="append", default=[], help="Pass another environment variable to the commands"
     )
+    parser.add_argument(
+        "--controls",
+        type=Path,
+        help="Control registry (guardian-checks.json). Its commands run with a native test report, "
+        "and each test's outcome is recorded.",
+    )
     args = parser.parse_args()
     restart_clean(args.keep_env)
 
@@ -244,6 +253,14 @@ def main() -> int:
     environment["CI"] = "true"
     environment.pop(CLEAN_MARKER, None)
 
+    controlled: set[str] = set()
+    if args.controls is not None:
+        controls, problems = load_registry(args.controls.resolve())
+        for problem in problems:
+            print(f"Control registry: {problem}")
+        controlled = {control["command"].strip() for control in controls.values()}
+    reports = out / "reports"
+
     # One run per distinct command. Several checks may share a command.
     by_command: dict[str, list[str]] = {}
     for item_id, command in recorded_runs(document):
@@ -266,9 +283,23 @@ def main() -> int:
             print(f"[{', '.join(ids)}] not run: {entry['rejected']}")
         else:
             log = logs / f"run-{index:03d}.log"
+            report = None
+            if command.strip() in controlled:
+                # A report left from an earlier run must never count, so it is removed first.
+                reports.mkdir(parents=True, exist_ok=True)
+                report = reports / f"run-{index:03d}.xml"
+                report.unlink(missing_ok=True)
+                argv = [*argv, f"--junitxml={report}"]
             entry["argv"] = argv
             entry["log"] = log.relative_to(out).as_posix()
             entry.update(run(argv, root, log, args.timeout, environment))
+            if report is not None:
+                if report.is_file():
+                    entry["test_report"] = read_junit(report, root)
+                    entry["test_report"]["path"] = report.relative_to(out).as_posix()
+                    entry["test_report"]["sha256"] = hashlib.sha256(report.read_bytes()).hexdigest()
+                else:
+                    entry["test_report"] = {"problem": "pytest wrote no test report"}
             result = "timed out" if entry["timed_out"] else f"exit {entry['exit_code']}"
             print(f"[{', '.join(ids)}] {command}: {result}")
         runs.append(entry)
