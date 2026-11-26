@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from guardian_controls import control_reasons, information_only
+
 BLOCKING_SEVERITIES = {"critical", "high"}
 ACCEPTABLE_SEVERITIES = {"medium", "low"}
 OPEN_STATUSES = {"open", "suspected", "unresolved"}
@@ -49,6 +51,10 @@ INLINE_CODE = {
 }
 
 
+# Modules that python -m may run as a test runner.
+PYTHON_TEST_MODULES = frozenset({"pytest", "unittest"})
+
+
 def test_command_problem(command: str, runners: frozenset[str] | set[str]) -> str:
     """Return why a command cannot prove a control, or '' when it can."""
     name = runner_name(command)
@@ -60,6 +66,15 @@ def test_command_problem(command: str, runners: frozenset[str] | set[str]) -> st
         return "cannot be parsed"
     if INLINE_CODE.get(name, set()) & set(argv[1:]):
         return "runs inline code instead of a test file"
+    if information_only(argv):
+        return "asks the runner for version, help, or a test list instead of running tests"
+    if name in {"python", "python3"}:
+        if "-m" in argv[1:]:
+            module = argv[argv.index("-m") + 1] if argv.index("-m") + 1 < len(argv) else ""
+            if module not in PYTHON_TEST_MODULES:
+                return f"runs the module {module or 'nothing'}, which is not a test runner"
+        elif len(argv) < 2 or not argv[1].endswith(".py"):
+            return "does not run a test file or a test module"
     return ""
 
 
@@ -114,6 +129,7 @@ def decide(
     ci_expected: dict[str, str] | None = None,
     extra_runners: frozenset[str] | set[str] = frozenset(),
     extra_reasons: list[str] | None = None,
+    controls: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Return a decision, the reasons, and whether release is allowed.
 
@@ -126,7 +142,10 @@ def decide(
     ci_evidence.py; when given, every runtime PASS and every fixed critical or
     high finding needs a matching passing run in it. ci_expected holds the
     values the evidence must match: audit_sha256, run_id, run_attempt, and
-    repository. extra_runners adds programs to TEST_RUNNERS.
+    repository. extra_runners adds programs to TEST_RUNNERS. controls is the
+    control registry from guardian_controls.load_registry: when given, every
+    critical runtime PASS must use its registry command, and with ci_evidence
+    every required test must have run and passed in the native test report.
     """
     runners = TEST_RUNNERS | set(extra_runners)
     reasons: list[str] = list(extra_reasons or [])
@@ -318,6 +337,9 @@ def decide(
 
     if ci_evidence is not None:
         reasons.extend(ci_reasons(document, ci_evidence, reference, ci_expected or {}))
+
+    if controls is not None:
+        reasons.extend(control_reasons(document, controls, required_critical, ci_evidence))
 
     if reasons:
         decision = NO_GO

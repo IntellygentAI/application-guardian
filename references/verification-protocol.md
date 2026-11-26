@@ -40,6 +40,7 @@ Schema version `1.1`. Start from `scripts/scaffold_audit.py`, which lists every 
 - **A recorded run for every runtime PASS:** `commit` equal to HEAD, `command`, `exit_code` of `0`, `observed`, and `executed_at`. A static PASS, allowed only for non-critical checks, still needs `commit` and `observed`.
 - **A justification for every NOT APPLICABLE**, in `justification`. For example: "The application takes no payments." A critical check marked NOT APPLICABLE also needs `approved_by`, the person who confirmed it does not apply. At least one critical check must PASS with an executed test.
 - **A real test command for every critical PASS and every fixed critical or high finding.** The command must start with a test runner, such as `pytest`, `npm`, `npx vitest`, or `go`, and must not run inline code such as `python -c` or `node -e`. Commands like `true` or `echo` are NO-GO. Pass `--allow-runner NAME` for a runner the gate does not know.
+- **The registry command, when there is a control registry.** With `--controls guardian-checks.json`, each critical runtime PASS must record exactly the command its registry entry names, and in CI every test in `required_tests` must appear in pytest's report as passed. See [docs/ci.md](../docs/ci.md#binding-checks-to-tests).
 - **A challenge for every critical or high finding closed as `false_positive`**, saying which guard stops it and how that was tested.
 - **A verification run for every fixed critical or high finding**, with the same fields as a runtime PASS, on the current commit. A fix verified on an older commit is stale.
 - **An approval record for every accepted risk** in `accepted_risks`: `id` of the accepted medium or low finding, `owner`, `approved_by`, `approved_at`, and `reason`. A record that matches no accepted finding is NO-GO.
@@ -87,6 +88,10 @@ The script is the decision. It returns exit 0 for GO and CONDITIONAL GO, and exi
 | Every critical check NOT APPLICABLE, or none passed with an executed test | NO-GO |
 | Critical PASS or critical/high fix whose command is not a test runner, or runs inline code | NO-GO |
 | Critical or high finding closed as false positive without a challenge | NO-GO |
+| Command that only prints version, help, or a test list (`pytest --version`, `go version`, `python -m this`) | NO-GO |
+| With `--controls`: critical PASS with no registry entry, or with a command other than the registry's | NO-GO |
+| With `--controls` in CI: no test report, no tests ran, or a required test missing, failed, or skipped | NO-GO |
+| With `--controls`: registry not committed, not in CODEOWNERS, or using a runner whose report cannot be read | NO-GO |
 | Accepted risk past its `expires_at` date | NO-GO |
 | `--head` is not the checked-out commit | NO-GO |
 | PASS without a recorded run (command, exit code 0, observed result, timestamp, commit) | NO-GO |

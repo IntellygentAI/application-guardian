@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "guardian-checks.schema.json",
+  "title": "Application Guardian control registry",
+  "description": "Binds each mandatory check to the reviewed tests that prove it. Keep it at the repository root as guardian-checks.json, with its own line in CODEOWNERS.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "controls"],
+  "properties": {
+    "schema_version": {"type": "string", "const": "1.0"},
+    "controls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["check_id", "runner", "command", "required_tests"],
+        "properties": {
+          "check_id": {"type": "string", "minLength": 1, "description": "An id from schemas/mandatory-checks.json"},
+          "description": {"type": "string"},
+          "runner": {"type": "string", "enum": ["pytest"]},
+          "command": {"type": "string", "minLength": 1, "description": "Exactly the command the audit records for this check"},
+          "required_tests": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"type": "string", "pattern": "::"},
+            "description": "pytest test IDs that must run and pass, such as tests/test_invoices.py::test_other_user_is_denied"
+          },
+          "minimum_passed": {"type": "integer", "minimum": 1}
+        }
+      }
+    }
+  }
+}
