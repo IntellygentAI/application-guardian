@@ -1,0 +1,51 @@
+{
+  "date": "2026-11-26",
+  "pack": "hard_pack.py as first published (seed 20261127), before the fixes in this change",
+  "skill_commit": "e0d20ad",
+  "models": {
+    "haiku": "claude-haiku-5-5",
+    "sonnet": "claude-sonnet-5-5"
+  },
+  "runs": {
+    "haiku-baseline-1": {
+      "tokens": 98997,
+      "tool_calls": 34,
+      "seconds": 124.1
+    },
+    "haiku-baseline-2": {
+      "tokens": 109704,
+      "tool_calls": 14,
+      "seconds": 119.9
+    },
+    "haiku-skill-1": {
+      "tokens": 104598,
+      "tool_calls": 23,
+      "seconds": 137.0
+    },
+    "haiku-skill-2": {
+      "tokens": 100285,
+      "tool_calls": 23,
+      "seconds": 139.9
+    },
+    "sonnet-baseline-1": {
+      "tokens": 75547,
+      "tool_calls": 8,
+      "seconds": 50.0
+    },
+    "sonnet-baseline-2": {
+      "tokens": 77669,
+      "tool_calls": 8,
+      "seconds": 54.1
+    },
+    "sonnet-skill-1": {
+      "tokens": 68098,
+      "tool_calls": 9,
+      "seconds": 43.4
+    },
+    "sonnet-skill-2": {
+      "tokens": 68345,
+      "tool_calls": 8,
+      "seconds": 37.7
+    }
+  }
+}
