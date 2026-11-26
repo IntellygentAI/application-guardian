@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "controls": [
+    {
+      "check_id": "ownership",
+      "description": "A signed-in user cannot read or change another user's invoice.",
+      "runner": "pytest",
+      "command": "python -m pytest -q tests/security/test_invoices.py",
+      "required_tests": [
+        "tests/security/test_invoices.py::test_owner_can_read_invoice",
+        "tests/security/test_invoices.py::test_other_user_is_denied",
+        "tests/security/test_invoices.py::test_anonymous_user_is_denied"
+      ],
+      "minimum_passed": 3
+    }
+  ]
+}

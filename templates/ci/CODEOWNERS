@@ -14,6 +14,10 @@
 # The release gate and the rest of the skill.
 /.agents/skills/application-guardian/ @your-org/release-reviewers
 
+# The control registry: which reviewed tests prove each mandatory check.
+# The gate returns NO-GO unless this file has a line of its own here.
+/guardian-checks.json @your-org/release-reviewers
+
 # The audit result. Accepted risks, approvers, and the commands CI re-runs live here.
 /docs/audits/audit-result.json @your-org/release-reviewers
 
